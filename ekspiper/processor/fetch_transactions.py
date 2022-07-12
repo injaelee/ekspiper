@@ -1,34 +1,54 @@
-from typing import Dict, Any
-import ekspiper
-from xrpl.clients.json_rpc_client import JsonRpcClient
+from typing import Any, Dict, Generic, List, TypeVar
+from ekspiper.processor.base import BaseProcessor
+from xrpl.asyncio.clients import AsyncJsonRpcClient
+from xrpl.models.requests.ledger import Ledger
 import logging
 
 
 logger = logging.getLogger(__name__)
 
 
-class FetchXRPLTransactionsProcessor(ekspiper.Processor):
+class XRPLFetchLedgerDetailsProcessor(BaseProcessor):
 
-	def __init__(self,
-		rpc_client: JsonRpcClient,
-	):
-		self.rpc_client = rpc_client
+    def __init__(self,
+        rpc_client: AsyncJsonRpcClient,
+    ):
+        self.rpc_client = rpc_client
 
-	def process(self,
-		entry: int, # ledger index
-	) -> List[Dict[str, Any]]:
+    async def aprocess(self,
+        entry: int, # ledger index
+    ) -> List[Dict[str, Any]]:
+        """
+        Presume the entry is the ledger index (int).
+        """
+        if type(entry) != int:
+            raise ValueError(
+                "[FetchXRPLTransactionsProcessor] Expected 'int' but got '%s': %s",
+                type(entry),
+                entry,
+            )
 
-		response = client.request(req)
+        logger.info(
+            "[FetchXRPLTransactionsProcessor] Fetching transactions for ledger '%d'",
+            entry,
+        )
 
+        # build the request
+        req = Ledger(
+            ledger_index = entry,
+            transactions = True,
+            expand = True,
+        )
+        response = await self.rpc_client.request(req)
+
+        # check the response success
         if not response.is_successful():
-            retry -= 1
-            logger.error(f"[{itr_num}] Received message has failure. Sleeping.")
-            time.sleep(10)
-            continue
+            raise ValueError("Fetching transactions for ledger '%d'" % entry)
 
         message = response.result
-
-        txns = message.get("ledger").get("transactions")
-        ledger_index = message.get("ledger_index")
-
-        return txns
+        """
+        Reference:
+          txns = message.get("ledger").get("transactions")
+          ledger_index = message.get("ledger_index")
+        """
+        return message
