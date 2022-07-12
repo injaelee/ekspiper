@@ -1,70 +1,83 @@
-
-from xrpl.models.requests.ledger import Ledger
+from xrpl.asyncio.clients import AsyncJsonRpcClient
 from xrpl.models.requests.book_offers import BookOffers
 from xrpl.models.currencies import XRP, IssuedCurrency
+from ekspiper.processor.base import BaseProcessor
+from typing import Any, Dict, List, Union
+import logging
 
-BookOfferRequest = collections.namedtuple(
-    "BookOfferRequest",
-    ["ledger_index", "taker_gets", "taker_pays"],
-)
 
-class FetchBookOfferProcessor(ekspiper.Processor):
+logger = logging.getLogger(__name__)
 
-	def process(self,
-		entry: int, # ledger index
-	) -> List[Dict[str, Any]]:
-        book_offer_request = BookOffers(
-            taker_gets = req.taker_gets,
-            taker_pays = req.taker_pays,
-            ledger_index = req.ledger_index,
+
+class XRPLFetchBookOffersProcessor(BaseProcessor):
+    def __init__(self,
+        rpc_client: AsyncJsonRpcClient,
+    ):
+        self.rpc_client = rpc_client
+
+    async def aprocess(self,
+        entry: BookOffers,
+    ) -> List[Dict[str, Any]]:
+        """
+        Presume the entry is the BookOffers
+        """
+        if type(entry) != BookOffers:
+            raise ValueError(
+                "[XRPLFetchBookOffersProcessor] Expected 'BookOffers' but got '%s': %s",
+                type(entry),
+                entry,
+            )
+
+        logger.info(
+            "[XRPLFetchBookOffersProcessor] Fetching transactions for ledger '%d'",
+            entry,
         )
 
-        await async_websocket_client.send(book_offer_request)
+        response = await self.rpc_client.request(entry)
+
+        # check the response success
+        if not response.is_successful():
+            raise ValueError("Fetching transactions for ledger '%d'" % entry)
+
+        message = response.result
+        """
+        Reference:
+          txns = message.get("ledger").get("transactions")
+          ledger_index = message.get("ledger_index")
+        """
+        return message
 
 
-class ExtractTokenPairsAsyncProcessor(FetchAsyncProcessor):
-    def __init__(self,
-        aqueue: asyncio.Queue,
-    ):
-        self.aq = aqueue
+class BuildBookOfferRequestsProcessor(BaseProcessor):
+    
+    def build_currency(self,
+        value: Union[str,Dict],
+    ) -> Union[XRP, IssuedCurrency]:
+        if type(value) == str:
+            return XRP()
 
-    async def process(self,
-        entry: Dict[str, Any],
-    ):
-        try:
-            await self._process(entry)
-        except Exception as exp:
-            traceback.print_exc()
+        amt = IssuedCurrency(
+            currency = value.get("currency"),
+            issuer = value.get("issuer"),
+        )
 
-    async def _process(self,
-        entry: Dict[str, Any],
-    ):
-        logger.info("[ExtractTokenPairsAsyncProcessor] Start iteration.")
+        if amt.currency is None or amt.issuer is None:
+            return None
+
+        return amt
+
+    async def aprocess(self,
+        entry: Dict[str, Any], # expect response.get("result")
+    ) -> List[BookOffers]:
 
         # extract all the token pairs
         transactions = entry.get(
-            "result", {}).get(
             "ledger", {}).get(
             "transactions", [])
 
-        ledger_index = entry.get("result", {}).get("ledger_index")
+        ledger_index = entry.get("ledger_index")
 
-        def build_currency(
-            value: Union[str,Dict],
-        ) -> Union[XRP, IssuedCurrency]:
-            if type(value) == str:
-                return XRP()
-
-            amt = IssuedCurrency(
-                currency = value.get("currency"),
-                issuer = value.get("issuer"),
-            )
-
-            if amt.currency is None or amt.issuer is None:
-                return None
-
-            return amt
-
+        # idempotancy: to remove duplicates 
         pair_tuple_set = set()
 
         for txn in transactions:
@@ -88,25 +101,28 @@ class ExtractTokenPairsAsyncProcessor(FetchAsyncProcessor):
                     # no need to continue without those data
                     continue
 
-                taker_gets_currency = build_currency(taker_gets)
-                taker_pays_currency = build_currency(taker_pays)
+                taker_gets_currency = self.build_currency(taker_gets)
+                taker_pays_currency = self.build_currency(taker_pays)
 
                 pair_tuple_set.add((
                     taker_gets_currency,
                     taker_pays_currency
                 ))
 
+        book_offers_request: List[BookOffer] = []
         for taker_gets_currency, taker_pays_currency in pair_tuple_set:
                 logger.info(
-                    "[ExtractTokenPairsAsyncProcessor] Enqueue book offer request: [%s], [%s]",
+                    "[BuildBookOfferRequestsProcessor] Enqueue book offer request: [%s], [%s]",
                     taker_gets_currency,
                     taker_pays_currency,
                 )
 
-                await self.aq.put(BookOfferRequest(
+                book_offers_request.append(BookOffers(
                     ledger_index = ledger_index,
                     taker_gets = taker_gets_currency,
                     taker_pays = taker_pays_currency,
                 ))
 
-        logger.info("[ExtractTokenPairsAsyncProcessor] Done iteration.")
+        logger.info("[BuildBookOfferRequestsProcessor] Done iteration.")
+
+        return book_offers_request
