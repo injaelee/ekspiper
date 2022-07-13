@@ -1,11 +1,18 @@
+from __future__ import annotations
 import asyncio
-from ekspiper.template.processor import ProcessCollectorsMap
+from ekspiper.template.processor import (
+    ProcessCollectorsMap, 
+    TemplateFlow,
+)
 from ekspiper.processor.base import EntryProcessor
 from ekspiper.collector.output import (
+    FluentCollector,
     OutputCollector,
     STDOUTCollector,
+    QueueCollector,
 )
 from fluent.asyncsender import FluentSender
+
 
 
 class ProcessCollectorsMapBuilder:
@@ -15,7 +22,7 @@ class ProcessCollectorsMapBuilder:
 
     def with_processor(self,
         processor: EntryProcessor,
-    ):
+    ) -> ProcessCollectorsMapBuilder:
         if self.processor:
             raise ValueError("EntryProcessor already defined: %s" % self.processor)
         self.processor = processor
@@ -23,7 +30,7 @@ class ProcessCollectorsMapBuilder:
 
     def add_async_queue_output_collector(self,
         async_queue: asyncio.Queue,
-    ):
+    ) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(QueueCollector(
             async_queue = async_queue,
         ))
@@ -32,14 +39,14 @@ class ProcessCollectorsMapBuilder:
     def add_fluent_output_collector(self,
         tag_name: str,
         fluent_sender: FluentSender,
-    ):
+    ) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(FluentCollector(
             fluent_sender = fluent_sender,
             tag_name = tag_name,
         ))
         return self
 
-    def with_stdout_output_collector(self):
+    def with_stdout_output_collector(self) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(STDOUTCollector())
         return self
 
@@ -53,7 +60,7 @@ class TemplateFlowBuilder:
 
     def add_process_collectors_map(self,
         process_collectors_map: ProcessCollectorsMap,
-    ) -> None;
+    ) -> TemplateFlowBuilder:
         self.process_collectors_maps.append(process_collectors_map)
         return self
 

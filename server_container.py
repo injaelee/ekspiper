@@ -1,4 +1,5 @@
 from aiohttp import web, web_app
+import asyncio
 from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
@@ -6,33 +7,43 @@ from ekspiper.builder.flow import (
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from fluent.asyncsender import FluentSender
 from ekspiper.schema.xrp import XRPLTransactionSchema
+from ekspiper.processor.fetch_transactions import XRPLFetchLedgerDetailsProcessor
+from ekspiper.processor.fetch_book_offers import (
+    XRPLFetchBookOffersProcessor, 
+    BuildBookOfferRequestsProcessor,
+)
+from ekspiper.processor.etl import (
+    ETLTemplateProcessor,
+    GenericValidator,
+    XRPLTransactionTransformer,
+)
+
 
 async def handle(request):
     name = request.match_info.get('name', "Anonymous")
     text = "Hello, " + name
     return web.Response(text=text)
 
-async def start_background_tasks(
-    app: web_app.Application,
-):
-    ledger_data_source = LedgerSubscriptionDataSource()
-    app["ledger_create_listener"] = asyncio.create_task(ledger_data_source.astart())
-    
-async def cleanup_background_tasks(
-    app: web_app.Application,
-):
-    app["ledger_create_listener"].cancel()
-    await app["ledger_create_listener"]
+#async def start_background_tasks(
+#    app: web_app.Application,
+#):
+#    ledger_data_source = LedgerSubscriptionDataSource()
+#    app["ledger_create_listener"] = asyncio.create_task(ledger_data_source.astart())
+#    
+#async def cleanup_background_tasks(
+#    app: web_app.Application,
+#):
+#    app["ledger_create_listener"].cancel()
+#    await app["ledger_create_listener"]
 
 
 def build_template_flows():
     async_rpc_client = AsyncJsonRpcClient("https://s2.ripple.com:51234/")
     fluent_sender = FluentSender(
-        cli_args.environment,
+        "local", #cli_args.environment,
         host = "0.0.0.0", #cli_args.fluent_host,
         port = 22522, #cli_args.fluent_port,
     )
-
 
     book_offers_fetch_flow_q = asyncio.Queue()
     txn_record_flow_q = asyncio.Queue()
@@ -69,7 +80,9 @@ def build_template_flows():
     #
     book_offers_rec_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = book_offers_rec_pc_map_builder.with_processor(
-        XRPLFetchBookOffersProcessor()
+        XRPLFetchBookOffersProcessor(
+            rpc_client = async_rpc_client,
+        )
     ).add_fluent_output_collector(
         tag_name = "book_offers",
         fluent_sender = fluent_sender,
@@ -83,7 +96,7 @@ def build_template_flows():
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
             validator = GenericValidator(XRPLTransactionSchema.SCHEMA),
-            transformer = XRPLObjectTransformer(),
+            transformer = XRPLTransactionTransformer(),
         )
     ).add_fluent_output_collector(
         tag_name = "transactions",
@@ -93,11 +106,12 @@ def build_template_flows():
 
 
 if __name__ == "__main__":
+    build_template_flows()
     app = web.Application()
     app.add_routes([
         web.get('/', handle),
         web.get('/{name}', handle),
     ])
-    app.on_startup.append(start_background_tasks)
-    app.on_cleanup.append(cleanup_background_tasks)
+    #app.on_startup.append(start_background_tasks)
+    #app.on_cleanup.append(cleanup_background_tasks)
     web.run_app(app)
