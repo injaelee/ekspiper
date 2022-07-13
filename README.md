@@ -2,6 +2,8 @@
 Data pipeline asyncio library for I/O bounded workflows.
 
 # General Structure and Components
+Behavior is constructed using composite components designed to under a template. Each component has a responsibility and individually testable.
+
 ## Templatized Processor Flow
 ```
 # the major components are:
