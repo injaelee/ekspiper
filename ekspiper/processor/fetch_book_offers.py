@@ -26,13 +26,13 @@ class XRPLFetchBookOffersProcessor(EntryProcessor):
         """
         if type(entry) != BookOffers:
             raise ValueError(
-                "[XRPLFetchBookOffersProcessor] Expected 'BookOffers' but got '%s': %s",
+                "[XRPLFetchBookOffersProcessor] Expected 'BookOffers' but got '%s': %s" % (
                 type(entry),
                 entry,
-            )
+            ))
 
         logger.info(
-            "[XRPLFetchBookOffersProcessor] Fetching transactions for ledger '%d'",
+            "[XRPLFetchBookOffersProcessor] Fetching book offers: %s",
             entry,
         )
 
@@ -40,9 +40,10 @@ class XRPLFetchBookOffersProcessor(EntryProcessor):
 
         # check the response success
         if not response.is_successful():
-            raise ValueError("Fetching transactions for ledger '%d'" % entry)
+            raise ValueError("Error fetching book offers: %s" % entry)
 
         message = response.result
+
         """
         Reference:
           txns = message.get("ledger").get("transactions")
@@ -120,7 +121,7 @@ class BuildBookOfferRequestsProcessor(EntryProcessor):
                     taker_pays_currency,
                 )
 
-                book_offers_request.append(BookOffers(
+                book_offers_requests.append(BookOffers(
                     ledger_index = ledger_index,
                     taker_gets = taker_gets_currency,
                     taker_pays = taker_pays_currency,

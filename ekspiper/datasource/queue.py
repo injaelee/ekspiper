@@ -1,4 +1,9 @@
 import asyncio
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 class QueueSource:
     def __init__(self,
@@ -14,6 +19,11 @@ class QueueSource:
         return self
 
     async def __anext__(self):
+        logging.info(
+            "Queue '%s' length: %d", 
+            self.async_queue,
+            self.async_queue.qsize(),
+        )
         if self.is_stop and self.async_queue.empty():
             raise StopAsyncIteration
 

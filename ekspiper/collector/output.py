@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 import asyncio
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,10 +57,14 @@ class MetricCollector(OutputCollector):
 class QueueCollector(OutputCollector):
     def __init__(self,
         async_queue: asyncio.Queue,
+        name:str = None,
     ):
         self.async_queue = async_queue
+        self.name = "" if not name else name
 
     async def acollect_output(self,
         entry: Dict[str, Any]
     ):
-        await async_queue.put(entry)
+        logger.debug("[QueueCollector:%s] pre-put entry", self.name)
+        await self.async_queue.put(entry)
+        logger.debug("[QueueCollector:%s] post-put entry", self.name)

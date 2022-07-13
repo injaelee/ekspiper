@@ -14,7 +14,6 @@ from ekspiper.collector.output import (
 from fluent.asyncsender import FluentSender
 
 
-
 class ProcessCollectorsMapBuilder:
     def __init__(self):
         self.processor: EntryProcessor = None
@@ -30,9 +29,11 @@ class ProcessCollectorsMapBuilder:
 
     def add_async_queue_output_collector(self,
         async_queue: asyncio.Queue,
+        name: str = None,
     ) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(QueueCollector(
             async_queue = async_queue,
+            name = name,
         ))
         return self
 
@@ -51,7 +52,10 @@ class ProcessCollectorsMapBuilder:
         return self
 
     def build(self) -> ProcessCollectorsMap:
-        return None
+        return ProcessCollectorsMap(
+            processor = self.processor,
+            collectors = self.output_collectors,
+        )
 
 
 class TemplateFlowBuilder:
