@@ -1,6 +1,12 @@
 # ekspiper
 Data pipeline asyncio library for I/O bounded workflows.
 
+# Execute
+If you are not looking to use this as a library, this is to execute a running daemon server to kick off the set up flow. 
+```bash
+python server_container.py
+```
+
 # General Structure and Components
 Behavior is constructed using composite components designed to run under a template. Each component has a responsibility and individually testable.
 
