@@ -1,4 +1,4 @@
-from ekspiper.template.processor import TemplateProcessor, ProcessCollectorsPair
+from ekspiper.template.processor import TemplateFlow, ProcessCollectorsMap
 from ekspiper.processor.base import EntryProcessor
 from ekspiper.collector.output import OutputCollector
 from ekspiper.datasource.queue import QueueSource
@@ -27,7 +27,7 @@ class _TestOutputCollector(OutputCollector):
         self.outputs.append(self.prefix + entry)
 
 
-class TemplateProcessorTest(unittest.IsolatedAsyncioTestCase):
+class TemplateFlowTest(unittest.IsolatedAsyncioTestCase):
     
     async def test_template_processor(self):
         output_collectors = [
@@ -36,13 +36,13 @@ class TemplateProcessorTest(unittest.IsolatedAsyncioTestCase):
             _TestOutputCollector(prefix = "3::"),
         ]
         process_collectors_pairs = [
-            ProcessCollectorsPair(
+            ProcessCollectorsMap(
                 processor = _TestStringProcessor(),
                 collectors = output_collectors,
             )
         ]
-        template_processor = TemplateProcessor(
-            list_of_process_collectors_pair = process_collectors_pairs
+        template_flow = TemplateFlow(
+            process_collectors_maps = process_collectors_pairs
         )
 
         # prepare a few inputs
@@ -56,7 +56,7 @@ class TemplateProcessorTest(unittest.IsolatedAsyncioTestCase):
         # so that we don't indefinitely wait
         q.stop() 
 
-        await template_processor.aexecute(
+        await template_flow.aexecute(
             message_iterator = q,
         )
 

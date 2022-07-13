@@ -13,6 +13,9 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
     def __init__(self,
         rpc_client: AsyncJsonRpcClient,
     ):
+        # more than efficient for a request-response query pattern
+        #  - server is not pushing any information; must have a request
+        #  - make sure HTTP keep-alive to avoid reconnect/establishment
         self.rpc_client = rpc_client
 
     async def aprocess(self,

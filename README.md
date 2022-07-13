@@ -26,9 +26,10 @@ for data in datasource_iterator:
 ## Output Collector
 - TODO
 
-# Tasks
+# Flows
+Check out the "build_template_flows" method in `server_container.py`.
 
-## Task: Ledger Details
+## Flow: Ledger Details
 - Data Source
   - New Ledger Events
 - Processors
@@ -36,14 +37,14 @@ for data in datasource_iterator:
     - Queue Collector (book_offers_fetch_flow_q)
     - Queue Collector (txn_record_flow_q)
 
-## Task: Book Offers Fetch Flow
+## Flow: Book Offers Fetch Flow
 - Data Source
   - Queue Source (book_offers_fetch_flow_q)
 - Processors
   - Book Offer Builder Processor
     - Queue Collector (book_offers_req_flow_q)
 
-## Task: Book Offers Record Flow
+## Flow: Book Offers Record Flow
 - Data Source
   - Queue Source (book_offers_req_flow_q)
 - Processors
@@ -51,7 +52,7 @@ for data in datasource_iterator:
     - Fluent Output Collector
     - Metric Output Collector
 
-## Task: Transaction Record Flow
+## Flow: Transaction Record Flow
 - Data Source
   - Queue Source (txn_record_flow_q)
 - Processors

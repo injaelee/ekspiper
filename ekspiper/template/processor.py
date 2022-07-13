@@ -8,25 +8,25 @@ from ekspiper.processor.base import RetryWrapper
 logger = logging.getLogger(__name__)
 
 
-ProcessCollectorsPair = collections.namedtuple(
-    "ProcessCollectorsPair", [
+ProcessCollectorsMap = collections.namedtuple(
+    "ProcessCollectorsMap", [
         "processor",
         "collectors",
     ]
 )
 
 
-class TemplateProcessor:
+class TemplateFlow:
     """
     Every ekspiper.Processor is associated with a corresponding set of ekspiper.Collectors.
     """
 
     def __init__(self,
-        list_of_process_collectors_pair: List[ProcessCollectorsPair],
+        process_collectors_maps: List[ProcessCollectorsMap],
         output_collector: OutputCollector = None,
     ):
         self.output_collector = output_collector
-        self.list_of_process_collectors_pair = list_of_process_collectors_pair
+        self.process_collectors_maps = process_collectors_maps
 
     async def aexecute(self,
         message_iterator,
@@ -37,7 +37,7 @@ class TemplateProcessor:
         async for message in message_iterator:
 
             # for all the process, collectors pair
-            for pc in self.list_of_process_collectors_pair:
+            for pc in self.process_collectors_maps:
 
                 output_messages = await retry_wrapper.aretry(
                     message,
