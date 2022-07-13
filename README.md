@@ -1,5 +1,5 @@
 # ekspiper
-Data pipeline library
+Data pipeline asyncio library for I/O bounded workflows.
 
 # Tasks
 
