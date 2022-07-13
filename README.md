@@ -7,6 +7,12 @@ If you are not looking to use this as a library, this is to execute a running da
 python server_container.py
 ```
 
+## Standalone
+For downloading/exporting all the ledger objects in a given ledger index:
+```bash
+python get_ledger_objects.py
+```
+
 # General Structure and Components
 Behavior is constructed using composite components designed to run under a template. Each component has a responsibility and individually testable.
 
