@@ -112,7 +112,10 @@ class LedgerObjectDataSource:
                     ledger_obj['_Sequence'] = self.message_sequence
                     self.message_sequence += 1
 
-                logger.info("[LedgerObjectDataSource] putting ledger obj into queue")
+                logger.info(
+                    "[LedgerObjectDataSource] seq:%d putting ledger obj into queue",
+                    self.message_sequence,
+                )
                 await self.async_queue.put(ledger_obj)
 
             # put into auto stop if last marker

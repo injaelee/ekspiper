@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable, Generic, TypeVar
+from typing import Any, Awaitable, Callable, Generic, List, TypeVar
 import asyncio
 import random
 import logging
@@ -11,8 +11,15 @@ logger = logging.getLogger(__name__)
 class EntryProcessor:
     async def aprocess(self,
         entry: Any,
-    ) -> Any:
+    ) -> List[Any]:
         pass
+
+
+class PassthruProcessor(EntryProcessor):
+    async def aprocess(self,
+        entry: Any,
+    ) -> List[Any]:
+        return [entry]
 
 
 I = TypeVar("I")
