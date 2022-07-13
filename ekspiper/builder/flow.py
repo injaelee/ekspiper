@@ -47,8 +47,14 @@ class ProcessCollectorsMapBuilder:
         ))
         return self
 
-    def with_stdout_output_collector(self) -> ProcessCollectorsMapBuilder:
-        self.output_collectors.append(STDOUTCollector())
+    def with_stdout_output_collector(self,
+        tag_name: str = "",
+        is_simplified: bool = False,
+    ) -> ProcessCollectorsMapBuilder:
+        self.output_collectors.append(STDOUTCollector(
+            tag_name = tag_name,
+            is_simplified = is_simplified,
+        ))
         return self
 
     def build(self) -> ProcessCollectorsMap:

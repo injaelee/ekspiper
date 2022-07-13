@@ -41,10 +41,27 @@ class LoggerCollector(OutputCollector):
 
 
 class STDOUTCollector(OutputCollector):
+    def __init__(self,
+        tag_name: str = "",
+        is_simplified: bool = False,
+    ):
+        self.tag_name = tag_name
+        self.is_simplified = is_simplified
+
     async def acollect_output(self,
         entry: Dict[str, Any]
     ):
-        print("[STDOUTCollector] %s" % entry)
+        if self.is_simplified:
+            if type(entry) == dict:
+                print("[STDOUTCollector::%s] Received entry keys: %s" % (
+                    self.tag_name,
+                    entry.keys(),
+                ))
+        else:
+            print("[STDOUTCollector::%s] %s" % (
+                self.tag_name,
+                entry,
+            ))
 
 
 class MetricCollector(OutputCollector):

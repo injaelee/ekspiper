@@ -37,7 +37,7 @@ Check out the "build_template_flows" method in `server_container.py`.
 - Processors
   - Ledger Details
     - Queue Collector (book_offers_fetch_flow_q)
-    - Queue Collector (txn_record_flow_q)
+    - Queue Collector (ledger_record_flow_q)
 
 ## Flow: Book Offers Fetch Flow
 - Data Source
@@ -54,9 +54,16 @@ Check out the "build_template_flows" method in `server_container.py`.
     - Fluent Output Collector
     - Metric Output Collector
 
+## Flow: Ledger to Transactions Break Flow
+- Data Source
+  - Queue Source (ledger_record_flow_q)
+- Processors
+  - Extract-Transaction-From-Ledger Processor
+    - Queue Collector (txn_records_flow_q)
+
 ## Flow: Transaction Record Flow
 - Data Source
-  - Queue Source (txn_record_flow_q)
+  - Queue Source (txn_records_flow_q)
 - Processors
   - ETLProcessor
     - Fluent Output Collector

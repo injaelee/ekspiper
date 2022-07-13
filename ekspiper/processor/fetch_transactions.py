@@ -31,6 +31,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
                 entry,
             ))
 
+        # TODO: input extraction should be done elsewhere; not its responsibility
         if type(entry) == int:
             ledger_index = entry
         elif type(entry) == dict:
@@ -67,3 +68,16 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
           ledger_index = message.get("ledger_index")
         """
         return [message]
+
+
+class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
+     async def aprocess(self,
+        entry: Dict[str, Any], # ledger response object
+    ) -> List[Dict[str, Any]]:
+
+        # expectation
+        transactions = entry.get("ledger").get("transactions")
+        if not transactions:
+            logger.warning("[XRPLExtractTransactionsFromLedgerProcessor] No transactions were found")
+
+        return transactions

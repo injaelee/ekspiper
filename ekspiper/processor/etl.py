@@ -37,9 +37,11 @@ class ETLTemplateProcessor(EntryProcessor):
 
     async def aprocess(self,
         data_entry: Any,
-    ) -> Any:
+    ) -> List[Any]:
         validated_entry = self.validator.validate(data_entry)
-        return self.transformer.transform(validated_entry)
+        if not validated_entry:
+            logger.warn("There were NO valid attributes")
+        return [self.transformer.transform(validated_entry)]
         
 
 class GenericValidator(Validator):
