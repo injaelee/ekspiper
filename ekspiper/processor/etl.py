@@ -1,4 +1,4 @@
-from .base import BaseProcessor
+from .base import EntryProcessor
 from collections import namedtuple
 from ekspiper.schema.xrp import XRPLObjectSchema
 from fluent import sender
@@ -26,7 +26,7 @@ class Transformer:
         return data_entry
 
 
-class ETLTemplateProcessor(BaseProcessor):
+class ETLTemplateProcessor(EntryProcessor):
 
     def __init__(self,
         validator: Validator,

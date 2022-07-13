@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class BaseProcessor:
+class EntryProcessor:
     async def aprocess(self,
         entry: Any,
     ) -> Any:

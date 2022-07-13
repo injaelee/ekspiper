@@ -1,13 +1,14 @@
+import asyncio
 
 class QueueSource:
     def __init__(self,
-        async_queue: AsyncQueue,
+        async_queue: asyncio.Queue,
     ):
         self.async_queue = async_queue
+        self.is_stop = False
 
     def stop(self):
         self.is_stop = True
-        self.populate_task.cancel()
 
     def __aiter__(self):
         return self

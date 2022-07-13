@@ -18,8 +18,7 @@ class LedgerCreationDataSource:
 
 
     def start(self):
-        self.populate_task = asyncio.create_task(
-            self._start())
+        self.populate_task = asyncio.create_task(self._start())
 
     async def _start(self):
         ledger_update_sub_req = Subscribe(
@@ -29,6 +28,7 @@ class LedgerCreationDataSource:
             await client.send(ledger_update_sub_req)
 
             async for message in client:
+                logger.info("[LedgerCreationDataSource] received message")
                 await self.async_queue.put(message)
 
     def stop(self):

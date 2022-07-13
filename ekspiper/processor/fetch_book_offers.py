@@ -1,7 +1,7 @@
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from xrpl.models.requests.book_offers import BookOffers
 from xrpl.models.currencies import XRP, IssuedCurrency
-from ekspiper.processor.base import BaseProcessor
+from ekspiper.processor.base import EntryProcessor
 from typing import Any, Dict, List, Union
 import logging
 
@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class XRPLFetchBookOffersProcessor(BaseProcessor):
+class XRPLFetchBookOffersProcessor(EntryProcessor):
     def __init__(self,
         rpc_client: AsyncJsonRpcClient,
     ):
@@ -45,10 +45,10 @@ class XRPLFetchBookOffersProcessor(BaseProcessor):
           txns = message.get("ledger").get("transactions")
           ledger_index = message.get("ledger_index")
         """
-        return message
+        return [message]
 
 
-class BuildBookOfferRequestsProcessor(BaseProcessor):
+class BuildBookOfferRequestsProcessor(EntryProcessor):
     
     def build_currency(self,
         value: Union[str,Dict],
@@ -109,7 +109,7 @@ class BuildBookOfferRequestsProcessor(BaseProcessor):
                     taker_pays_currency
                 ))
 
-        book_offers_request: List[BookOffer] = []
+        book_offers_requests: List[BookOffer] = []
         for taker_gets_currency, taker_pays_currency in pair_tuple_set:
                 logger.info(
                     "[BuildBookOfferRequestsProcessor] Enqueue book offer request: [%s], [%s]",
@@ -125,4 +125,4 @@ class BuildBookOfferRequestsProcessor(BaseProcessor):
 
         logger.info("[BuildBookOfferRequestsProcessor] Done iteration.")
 
-        return book_offers_request
+        return book_offers_requests

@@ -1,5 +1,5 @@
-from typing import Any, Dict, Generic, List, TypeVar
-from ekspiper.processor.base import BaseProcessor
+from typing import Any, Dict, Generic, List, TypeVar, Union
+from ekspiper.processor.base import EntryProcessor
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from xrpl.models.requests.ledger import Ledger
 import logging
@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class XRPLFetchLedgerDetailsProcessor(BaseProcessor):
+class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
     def __init__(self,
         rpc_client: AsyncJsonRpcClient,
@@ -16,26 +16,38 @@ class XRPLFetchLedgerDetailsProcessor(BaseProcessor):
         self.rpc_client = rpc_client
 
     async def aprocess(self,
-        entry: int, # ledger index
+        entry: Union[int, dict], # ledger index
     ) -> List[Dict[str, Any]]:
         """
         Presume the entry is the ledger index (int).
         """
-        if type(entry) != int:
+        if type(entry) not in [int, dict]:
             raise ValueError(
-                "[FetchXRPLTransactionsProcessor] Expected 'int' but got '%s': %s",
+                "[FetchXRPLTransactionsProcessor] Expected 'int' but got '%s': %s" % (
                 type(entry),
                 entry,
-            )
+            ))
+
+        if type(entry) == int:
+            ledger_index = entry
+        elif type(entry) == dict:
+            ledger_index = entry.get(
+                "result", {}).get("ledger_index") or entry.get("ledger_index")
+        
+        if not ledger_index:
+            raise ValueError(
+                "[FetchXRPLTransactionsProcessor] missing ledger index: %s" % (
+                entry,  
+            ))            
 
         logger.info(
             "[FetchXRPLTransactionsProcessor] Fetching transactions for ledger '%d'",
-            entry,
+            ledger_index,
         )
 
         # build the request
         req = Ledger(
-            ledger_index = entry,
+            ledger_index = ledger_index,
             transactions = True,
             expand = True,
         )
@@ -43,7 +55,7 @@ class XRPLFetchLedgerDetailsProcessor(BaseProcessor):
 
         # check the response success
         if not response.is_successful():
-            raise ValueError("Fetching transactions for ledger '%d'" % entry)
+            raise ValueError("Fetching transactions for ledger '%d'" % ledger_index)
 
         message = response.result
         """
@@ -51,4 +63,4 @@ class XRPLFetchLedgerDetailsProcessor(BaseProcessor):
           txns = message.get("ledger").get("transactions")
           ledger_index = message.get("ledger_index")
         """
-        return message
+        return [message]
