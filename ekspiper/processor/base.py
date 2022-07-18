@@ -30,6 +30,9 @@ class RetryWrapper(Generic[I, O]):
         entry: I,
         func_handler: Callable[[I], Awaitable[O]],
         max_retry_count: int = 5,
+        is_mute_stacktrace: bool = False,
+        base_sleep_s: int = 10,
+        sleep_multiplier: float = 1.5,
     ) -> O:
         iteration_count = 0
         is_value_set = False
@@ -41,14 +44,14 @@ class RetryWrapper(Generic[I, O]):
                 is_value_set = True
                 break
             except Exception as e:
-                sleep_time_s = 10 * (1.5) ** iteration_count + random.randrange(2,8)
+                sleep_time_s = base_sleep_s * sleep_multiplier ** iteration_count + random.randrange(2,8)
                 logger.error(
                     "[iteration:%d] Sleeping %f seconds after receiving message has failure: %s",
                     iteration_count,
                     sleep_time_s,
                     e,
                 )
-                traceback.print_exc()
+                is_mute_stacktrace or traceback.print_exc()
                 await asyncio.sleep(sleep_time_s)
                 continue
 

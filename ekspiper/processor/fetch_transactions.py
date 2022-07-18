@@ -71,7 +71,12 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
 
 class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
-     async def aprocess(self,
+    def __init__(self,
+        is_include_ledger_index = False,
+    ):
+        self.is_include_ledger_index = is_include_ledger_index
+
+    async def aprocess(self,
         entry: Dict[str, Any], # ledger response object
     ) -> List[Dict[str, Any]]:
 
@@ -80,4 +85,68 @@ class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
         if not transactions:
             logger.warning("[XRPLExtractTransactionsFromLedgerProcessor] No transactions were found")
 
+        if self.is_include_ledger_index:
+            ledger_index = entry.get("ledger").get("ledger_index")
+            for txn in transactions:
+                txn["_ledger_index"] = ledger_index
+
         return transactions
+
+
+class PaymentTransactionSummaryProcessor(EntryProcessor):
+    #def process(self,
+    #    entry: Dict[str, Any],
+    #    **kwargs,
+    #):
+    def _parse_paths(self,
+        paths: List[List[Dict[str,str]]],
+    ) -> List[List[str]]:
+        path_list = []
+        for path in paths:
+            resolved_path = []
+            for step in path:
+                currency = step.get("currency")
+                issuer = step.get("issuer")
+                account = step.get("account")
+
+                if account:
+                    cur = "rippling:" + account
+                else:
+                    cur = currency + ":" + issuer if issuer else currency
+
+                resolved_path.append(cur)
+            path_list.append(resolved_path)
+        return path_list
+
+    async def aprocess(self,
+        entry: Dict[str, Any], # ledger response object
+    ) -> List[Dict[str, Any]]:
+
+        if entry.get("TransactionType") != "Payment":
+            return []
+        
+        offer_count = 1
+        path_size = 0
+
+        step_sizes = []
+        path_list = self._parse_paths(entry.get("Paths", []))
+        path_size = len(path_list)
+        paths_str = ""
+        for steps in path_list:
+            if paths_str:
+                paths_str += "-"
+            step_sizes.append(str(len(steps)))
+            paths_str += ">".join(steps)
+
+        for affected_node in entry.get("metaData", {}).get("AffectedNodes", []):
+            if affected_node.get("ModifiedNode", {}).get("LedgerEntryType") == "Offer":
+                offer_count += 1
+
+        # obtain the transaction status
+        txn_result = entry.get("metaData", {}).get("TransactionResult")
+
+        ledger_index = entry.get("_ledger_index")
+        txn_hash = entry.get("hash")
+
+        step_sizes_str = "|" + "\t".join(step_sizes) if len(step_sizes) > 0 else ""
+        return [f"{ledger_index}\t{txn_hash}\t{txn_result}\t{path_size}\t{offer_count}{step_sizes_str}\t*{paths_str}"]

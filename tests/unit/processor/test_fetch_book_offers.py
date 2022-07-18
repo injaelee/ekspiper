@@ -1,4 +1,6 @@
 from ekspiper.processor.fetch_book_offers import BuildBookOfferRequestsProcessor
+from xrpl.models.requests.book_offers import BookOffers
+from xrpl.models.currencies import XRP, IssuedCurrency
 import json
 import unittest
 
@@ -121,4 +123,19 @@ class BookOfferProcessorsTest(unittest.IsolatedAsyncioTestCase):
         book_offer_requests = await processor.aprocess(
             input_entry,
         )
-        print(book_offer_requests)
+
+        expected_output = [
+          BookOffers(
+            taker_gets = IssuedCurrency(
+              currency = "USD",
+              issuer = "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
+            ),
+            taker_pays = XRP(),
+          ),
+        ]
+
+        self.assertEqual(len(expected_output), len(book_offer_requests))
+        for actual_value, expected_value in zip(book_offer_requests, expected_output):
+          self.assertEqual(actual_value.taker_gets, expected_value.taker_gets)
+          self.assertEqual(actual_value.taker_pays, expected_value.taker_pays)
+        

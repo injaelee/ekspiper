@@ -12,11 +12,15 @@ class RetryWrapperTest(unittest.IsolatedAsyncioTestCase):
                 raise ValueError("simulated value error")
             return str(":{}:".format(input))
 
+        value_passed = 121
+        expected_value = f":{value_passed}:"
         retry_wrapper = RetryWrapper[int, str]()
         output = await retry_wrapper.aretry(
-            121,
+            value_passed,
             func_handler = wrappable_func,
+            is_mute_stacktrace = True,
+            base_sleep_s = 0,
+            sleep_multiplier = 0,
         )
 
-        print("Output gathered '{}'".format(output))
-
+        self.assertEqual(expected_value, output)

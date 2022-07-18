@@ -31,6 +31,9 @@ class TemplateFlow:
     async def aexecute(self,
         message_iterator,
     ):
+        if not message_iterator:
+            raise ValueError("message_iterator is not specified")
+
         retry_wrapper = RetryWrapper()
 
         # go through all the messages
@@ -43,6 +46,11 @@ class TemplateFlow:
                     message,
                     pc.processor.aprocess,
                 )
+
+                if type(output_messages) != list:
+                    raise ValueError(
+                        "output message from processor" + 
+                        "must be a list but got '%s'" % type(output_messages))
 
                 # run through the collectors for the corresponding
                 # Collectors

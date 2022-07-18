@@ -27,7 +27,7 @@ async def amain():
     ledger_obj_export_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = ledger_obj_export_pc_map_builder.with_processor(
         PassthruProcessor()
-    ).with_stdout_output_collector(tag_name = "ledger_obj", is_simplified = True).build()
+    ).with_stdout_output_collector(tag_name = "ledger_obj", is_simplified = False).build()
     #).add_async_queue_output_collector(
     #    async_queue = txn_record_flow_q,
     #).build()
@@ -37,6 +37,9 @@ async def amain():
         message_iterator = ledger_object_data_source,
     ))
 
+    # Flow: Fluent Export
+    
+    
     await asyncio.sleep(100)
 
 
