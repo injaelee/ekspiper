@@ -26,11 +26,11 @@ class FluentCollector(OutputCollector):
         entry: Dict[str, Any]
     ):
         logger.info("[FluentCollector] pre-emit")
-        await self.fluent_sender.emit(
+        is_emitted = self.fluent_sender.emit(
             self.tag_name, 
             entry,
         )
-        logger.info("[FluentCollector] emit done")
+        logger.info("[FluentCollector] emit done: %s", is_emitted)
 
 
 class LoggerCollector(OutputCollector):
