@@ -8,12 +8,13 @@ from xrpl.models.requests.ledger_data import LedgerData
 from typing import Union
 import logging
 import bson
+from .data import DataSource
 
 
 logger = logging.getLogger(__name__)
 
 
-class LedgerCreationDataSource:
+class LedgerCreationDataSource(DataSource):
     def __init__(self,
         wss_url: str = "wss://s1.ripple.com",
     ):

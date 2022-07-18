@@ -10,6 +10,7 @@ from ekspiper.collector.output import (
     OutputCollector,
     STDOUTCollector,
     QueueCollector,
+    DataSinkCollector,
 )
 from fluent.asyncsender import FluentSender
 
@@ -33,6 +34,16 @@ class ProcessCollectorsMapBuilder:
     ) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(QueueCollector(
             async_queue = async_queue,
+            name = name,
+        ))
+        return self
+
+    def add_data_sink_output_collector(self,
+        data_sink: DataSink,
+        name: str = None,
+    ) -> ProcessCollectorsMapBuilder:
+        self.output_collectors.append(DataSinkCollector(
+            data_sink = data_sink,
             name = name,
         ))
         return self

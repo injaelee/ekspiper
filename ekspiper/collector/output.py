@@ -2,6 +2,7 @@ from fluent.asyncsender import FluentSender
 from typing import Any, Dict, List
 import asyncio
 import logging
+from ekspiper.connect.data import DataSink
 
 
 logger = logging.getLogger(__name__)
@@ -85,3 +86,18 @@ class QueueCollector(OutputCollector):
         logger.debug("[QueueCollector:%s] pre-put entry", self.name)
         await self.async_queue.put(entry)
         logger.debug("[QueueCollector:%s] post-put entry", self.name)
+
+
+class DataSinkCollector(OutputCollector):
+    def __init__(self,
+        data_sink: DataSink,
+        name:str = None,
+    ):
+        self.data_sink = data_sink
+        self.name = "" if not name else name
+
+    async def acollect_output(self,
+        entry: Dict[str, Any]
+    ):
+        await self.data_sink.put(entry)
+

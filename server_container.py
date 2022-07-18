@@ -7,7 +7,7 @@ from ekspiper.builder.flow import (
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from fluent.asyncsender import FluentSender
 from ekspiper.connect.xrpledger import LedgerCreationDataSource
-from ekspiper.connect.queue import QueueSource
+from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.schema.xrp import XRPLTransactionSchema
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
@@ -52,10 +52,10 @@ async def stop_template_flows(
     # theoretically, if we stop the sources, flow should
     # drain out and exit gracefully
     app["ledger_creation_source"].stop()
-    app["book_offers_fetch_flow_source"].stop()
-    app["book_offers_req_flow_source"].stop()
-    app["ledger_record_source"].stop()
-    app["txn_record_source"].stop()
+    app["book_offers_fetch_flow_source_sink"].stop()
+    app["book_offers_req_flow_source_sink"].stop()
+    app["ledger_record_source_sink"].stop()
+    app["txn_record_source_sink"].stop()
 
     # now wait for them to drain
     await app["flow_ledger_details"]
@@ -76,12 +76,6 @@ async def start_template_flows(
         port = 22522, #cli_args.fluent_port,
     )
 
-    book_offers_fetch_flow_q = asyncio.Queue()
-    ledger_record_flow_q = asyncio.Queue()
-    txn_record_flow_q = asyncio.Queue()
-    book_offers_req_flow_q = asyncio.Queue()
-
-
     # build the ledger creation up-to-date data source
     ledger_creation_source = LedgerCreationDataSource(
         wss_url = "wss://s1.ripple.com",
@@ -90,29 +84,25 @@ async def start_template_flows(
     app["ledger_creation_source"] = ledger_creation_source
 
     # build the queue source
-    book_offers_fetch_flow_source = QueueSource(
-        name = "book_offers_fetch_flow_source",
-        async_queue = book_offers_fetch_flow_q,
+    book_offers_fetch_flow_source_sink = QueueSourceSink(
+        name = "book_offers_fetch_flow_source_sink",
     )
-    app["book_offers_fetch_flow_source"] = book_offers_fetch_flow_source
+    app["book_offers_fetch_flow_source_sink"] = book_offers_fetch_flow_source_sink
 
-    book_offers_req_flow_source = QueueSource(
-        name = "book_offers_req_flow_source",
-        async_queue = book_offers_req_flow_q,
+    book_offers_req_flow_source_sink = QueueSourceSink(
+        name = "book_offers_req_flow_source_sink",
     )
-    app["book_offers_req_flow_source"] = book_offers_req_flow_source
+    app["book_offers_req_flow_source_sink"] = book_offers_req_flow_source_sink
 
-    ledger_record_source = QueueSource(
-        name = "ledger_record_source",
-        async_queue = ledger_record_flow_q,
+    ledger_record_source_sink = QueueSourceSink(
+        name = "ledger_record_source_sink",
     )
-    app["ledger_record_source"] = ledger_record_source
+    app["ledger_record_source_sink"] = ledger_record_source_sink
 
-    txn_record_source = QueueSource(
-        name = "txn_record_source",
-        async_queue = txn_record_flow_q,
+    txn_record_source_sink = QueueSourceSink(
+        name = "txn_record_source_sink",
     )
-    app["txn_record_source"] = txn_record_source
+    app["txn_record_source_sink"] = txn_record_source_sink
 
     # Flow: Ledger Details
     #
@@ -122,12 +112,12 @@ async def start_template_flows(
             rpc_client = async_rpc_client,
         )
     #).with_stdout_output_collector().build()
-    ).add_async_queue_output_collector(
-        async_queue = book_offers_fetch_flow_q,
-        name = "book_offers_fetch_flow_q",
-    ).add_async_queue_output_collector(
-        async_queue = ledger_record_flow_q,
-        name = "ledger_record_flow_q",
+    ).add_data_sink_output_collector(
+        data_sink = book_offers_fetch_flow_source_sink,
+        name = "book_offers_fetch_flow_source_sink",
+    ).add_data_sink_output_collector(
+        data_sink = ledger_record_source_sink,
+        name = "ledger_record_source_sink",
     ).build()
     flow_ledger_details = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_ledger_details"] = asyncio.create_task(flow_ledger_details.aexecute(
@@ -141,12 +131,14 @@ async def start_template_flows(
     pc_map = book_offers_fetch_pc_map_builder.with_processor(
         BuildBookOfferRequestsProcessor()
     #).with_stdout_output_collector().build()
-    ).add_async_queue_output_collector(
-        async_queue = book_offers_req_flow_q
+    ).add_data_sink_output_collector(
+        data_sink = book_offers_req_flow_source_sink,
+        name = "book_offers_req_flow_source_sink",
     ).build()
+
     flow_booker_offers_fetch = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_booker_offers_fetch"] = asyncio.create_task(flow_booker_offers_fetch.aexecute(
-        message_iterator = book_offers_fetch_flow_source,
+        message_iterator = book_offers_fetch_flow_source_sink,
     ))
 
     
@@ -169,7 +161,7 @@ async def start_template_flows(
         #).build()
         flow_booker_offer_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
         app["flow_booker_offer_records"].append(asyncio.create_task(flow_booker_offer_record.aexecute(
-            message_iterator = book_offers_req_flow_source,
+            message_iterator = book_offers_req_flow_source_sink,
         )))
 
     
@@ -179,12 +171,14 @@ async def start_template_flows(
     pc_map = ledger_to_txns_brk_pc_map_builder.with_processor(
         XRPLExtractTransactionsFromLedgerProcessor()
     #).with_stdout_output_collector(tag_name = "ledger_brk", is_simplified = True).build()
-    ).add_async_queue_output_collector(
-        async_queue = txn_record_flow_q,
+    ).add_data_sink_output_collector(
+        data_sink = txn_record_source_sink,
+        name = "txn_record_source_sink",
     ).build()
+
     flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_ledger_to_txns_brk"] = asyncio.create_task(flow_ledger_to_txns_brk.aexecute(
-        message_iterator = ledger_record_source,
+        message_iterator = ledger_record_source_sink,
     ))
 
     
@@ -203,7 +197,7 @@ async def start_template_flows(
     #).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_txn_record"] = asyncio.create_task(flow_txn_record.aexecute(
-        message_iterator = txn_record_source,
+        message_iterator = txn_record_source_sink,
     ))
     
 

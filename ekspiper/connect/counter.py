@@ -8,12 +8,13 @@ from xrpl.models.requests.ledger_data import LedgerData
 from typing import Union
 import logging
 import bson
+from .data import DataSource
 
 
 logger = logging.getLogger(__name__)
 
 
-class PartitionedCounterDataSource:
+class PartitionedCounterDataSource(DataSource):
     def __init__(self,
         starting_count: int,
         shard_index: int,
@@ -42,7 +43,7 @@ class PartitionedCounterDataSource:
             idx = self.current_index
             self.current_index += self.incr_by
             await self.async_queue.put(idx)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0) # force yielding control
 
     def stop(self):
         self.is_stop = True

@@ -7,7 +7,7 @@ from ekspiper.builder.flow import (
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from xrpl.asyncio.ledger import get_latest_validated_ledger_sequence
 from ekspiper.connect.counter import PartitionedCounterDataSource
-from ekspiper.connect.queue import QueueSource
+from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
     XRPLExtractTransactionsFromLedgerProcessor,
@@ -28,10 +28,8 @@ async def amain():
     start_index = await start_ledger_sequence(async_rpc_client)
 
     # build the ledger queue for processing
-    ledger_record_flow_q = asyncio.Queue()
-    ledger_record_source = QueueSource(
+    ledger_record_source_sink = QueueSourceSink(
         name = "ledger_record_source",
-        async_queue = ledger_record_flow_q,
     )
 
     # Flow: Obtain Ledger Details
@@ -53,10 +51,9 @@ async def amain():
             XRPLFetchLedgerDetailsProcessor(
                 rpc_client = async_rpc_client,
             )
-        #).with_stdout_output_collector().build()
-        ).add_async_queue_output_collector(
-            async_queue = ledger_record_flow_q,
-            name = "ledger_record_flow_q",
+        ).add_data_sink_output_collector(
+            data_sink = ledger_record_source_sink,
+            name = "ledger_record_source_sink"
         ).build()
 
         flow_payment_detail = TemplateFlowBuilder().add_process_collectors_map(
@@ -68,10 +65,8 @@ async def amain():
         )))
 
     # build the transaction queue for processing
-    transaction_record_flow_q = asyncio.Queue()
-    transaction_record_source = QueueSource(
-        name = "transaction_record_source",
-        async_queue = transaction_record_flow_q,
+    txn_record_source_sink = QueueSourceSink(
+        name = "txn_record_source_sink",
     )
 
     # Flow: Break down the ledger into transactions
@@ -80,14 +75,14 @@ async def amain():
         XRPLExtractTransactionsFromLedgerProcessor(
             is_include_ledger_index = True,
         )
-    ).add_async_queue_output_collector(
-        async_queue = transaction_record_flow_q,
-        name = "transaction_record_flow_q",
+    ).add_data_sink_output_collector(
+        data_sink = txn_record_source_sink,
+        name = "txn_record_source_sink"
     ).build()
 
     flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     flow_ledger_to_txns_brk_task = asyncio.create_task(flow_ledger_to_txns_brk.aexecute(
-        message_iterator = ledger_record_source,
+        message_iterator = ledger_record_source_sink,
     ))
 
     # Flow: Summarize the Ledger Transactions
@@ -98,7 +93,7 @@ async def amain():
 
     flow_summary_txns = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     flow_summary_txns_task = asyncio.create_task(flow_summary_txns.aexecute(
-        message_iterator = transaction_record_source,
+        message_iterator = txn_record_source_sink,
     ))
 
     # TODO: for now
