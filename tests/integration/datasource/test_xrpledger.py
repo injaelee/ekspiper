@@ -1,4 +1,4 @@
-from ekspiper.datasource.xrpledger import (
+from ekspiper.source.xrpledger import (
     LedgerCreationDataSource,
     LedgerObjectDataSource,
 )

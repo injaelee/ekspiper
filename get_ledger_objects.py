@@ -4,7 +4,7 @@ from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
 )
-from ekspiper.datasource.xrpledger import LedgerObjectDataSource
+from ekspiper.connect.xrpledger import LedgerObjectDataSource
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from ekspiper.processor.base import PassthruProcessor
 from fluent.asyncsender import FluentSender
@@ -25,6 +25,9 @@ async def amain():
         host = "0.0.0.0", 
         port = 25225,
     )
+
+    # create the queues for output and schema check
+
 
     # setup the ledger object data source
     ledger_object_data_source = LedgerObjectDataSource(

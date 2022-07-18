@@ -1,7 +1,7 @@
 from ekspiper.template.processor import TemplateFlow, ProcessCollectorsMap
 from ekspiper.processor.base import EntryProcessor
 from ekspiper.collector.output import OutputCollector
-from ekspiper.datasource.queue import QueueSource
+from ekspiper.source.queue import QueueSource
 from typing import Any
 import asyncio
 import unittest

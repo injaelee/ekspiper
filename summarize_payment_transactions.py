@@ -6,13 +6,13 @@ from ekspiper.builder.flow import (
 )
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from xrpl.asyncio.ledger import get_latest_validated_ledger_sequence
-from ekspiper.datasource.counter import PartitionedCounterDataSource
+from ekspiper.connect.counter import PartitionedCounterDataSource
+from ekspiper.connect.queue import QueueSource
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
     XRPLExtractTransactionsFromLedgerProcessor,
     PaymentTransactionSummaryProcessor,
 )
-from ekspiper.datasource.queue import QueueSource
 
 
 logger = logging.getLogger(__name__)

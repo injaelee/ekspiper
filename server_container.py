@@ -6,8 +6,8 @@ from ekspiper.builder.flow import (
 )
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from fluent.asyncsender import FluentSender
-from ekspiper.datasource.xrpledger import LedgerCreationDataSource
-from ekspiper.datasource.queue import QueueSource
+from ekspiper.connect.xrpledger import LedgerCreationDataSource
+from ekspiper.connect.queue import QueueSource
 from ekspiper.schema.xrp import XRPLTransactionSchema
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,

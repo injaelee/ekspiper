@@ -1,4 +1,4 @@
-from ekspiper.datasource.counter import PartitionedCounterDataSource
+from ekspiper.source.counter import PartitionedCounterDataSource
 import unittest
 
 class PartitionedCounterDataSourceTest(unittest.IsolatedAsyncioTestCase):
