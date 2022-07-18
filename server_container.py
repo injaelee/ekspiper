@@ -34,17 +34,6 @@ async def handle(request):
     text = "Hello, " + name
     return web.Response(text=text)
 
-#async def start_background_tasks(
-#    app: web_app.Application,
-#):
-#    ledger_data_source = LedgerSubscriptionDataSource()
-#    app["ledger_create_listener"] = asyncio.create_task(ledger_data_source.astart())
-#    
-#async def cleanup_background_tasks(
-#    app: web_app.Application,
-#):
-#    app["ledger_create_listener"].cancel()
-#    await app["ledger_create_listener"]
 
 async def stop_template_flows(
     app: web_app.Application,
@@ -64,6 +53,7 @@ async def stop_template_flows(
         await r
     await app["flow_txn_record"]
     await app["flow_ledger_to_txns_brk"]
+
 
 async def start_template_flows(
     app: web_app.Application,
