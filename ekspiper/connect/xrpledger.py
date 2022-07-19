@@ -113,7 +113,7 @@ class LedgerObjectDataSource:
                     ledger_obj['_Sequence'] = self.message_sequence
                     self.message_sequence += 1
 
-                logger.info(
+                logger.debug(
                     "[LedgerObjectDataSource] seq:%d putting ledger obj into queue",
                     self.message_sequence,
                 )

@@ -4,10 +4,13 @@ from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
 )
+from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.connect.xrpledger import LedgerObjectDataSource
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 from ekspiper.processor.base import PassthruProcessor
+from ekspiper.processor.attribute import AttributeCollectionProcessor
 from fluent.asyncsender import FluentSender
+from ekspiper.schema.xrp import XRPLObjectSchema
 import logging
 
 
@@ -27,7 +30,9 @@ async def amain():
     )
 
     # create the queues for output and schema check
-
+    ledger_record_source_sink = QueueSourceSink(
+        name = "ledger_record_source_sink",
+    )
 
     # setup the ledger object data source
     ledger_object_data_source = LedgerObjectDataSource(
@@ -42,17 +47,31 @@ async def amain():
     pc_map = ledger_obj_export_pc_map_builder.with_processor(
         PassthruProcessor()
     #).with_stdout_output_collector(tag_name = "ledger_obj", is_simplified = False).build()
+    ).add_data_sink_output_collector(
+        data_sink = ledger_record_source_sink,
+        name = "ledger_record_source_sink",
     ).add_fluent_output_collector(
         fluent_sender = fluent_sender,
         tag_name = "ledger_obj",
     ).build()
-    #).add_async_queue_output_collector(
-    #    async_queue = txn_record_flow_q,
-    #).build()
 
     flow_ledger_obj_export = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
-    flow_task = asyncio.create_task(flow_ledger_obj_export.aexecute(
+    flow_ledger_obj_export_task = asyncio.create_task(flow_ledger_obj_export.aexecute(
         message_iterator = ledger_object_data_source,
+    ))
+
+    # Flow: Ledger Data Schema Attribute Collector
+    pc_map = ProcessCollectorsMapBuilder().with_processor(
+        AttributeCollectionProcessor(
+            init_attribute_mapping = XRPLObjectSchema.SCHEMA,
+        )
+    ).with_stdout_output_collector(
+        tag_name = "ledger_obj_schema",
+    ).build()
+
+    flow_ledger_data_schema = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+    flow_ledger_data_schema_task = asyncio.create_task(flow_ledger_data_schema.aexecute(
+        message_iterator = ledger_record_source_sink
     ))
 
     # Flow: Fluent Export

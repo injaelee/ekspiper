@@ -26,12 +26,12 @@ class FluentCollector(OutputCollector):
     async def acollect_output(self,
         entry: Dict[str, Any]
     ):
-        logger.info("[FluentCollector] pre-emit")
+        logger.debug("[FluentCollector] pre-emit")
         is_emitted = self.fluent_sender.emit(
             self.tag_name, 
             entry,
         )
-        logger.info("[FluentCollector] emit done: %s", is_emitted)
+        logger.debug("[FluentCollector] emit done: %s", is_emitted)
 
 
 class LoggerCollector(OutputCollector):

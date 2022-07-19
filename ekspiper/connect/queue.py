@@ -23,7 +23,7 @@ class QueueSourceSink(DataSource, DataSink):
         return self
 
     async def __anext__(self):
-        logging.info(
+        logging.debug(
             "Queue '%s' length: %d", 
             self.name,
             self.async_queue.qsize(),
