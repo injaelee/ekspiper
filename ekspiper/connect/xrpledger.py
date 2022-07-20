@@ -5,7 +5,7 @@ from xrpl.asyncio.clients import (
 )
 from xrpl.models import Subscribe, Unsubscribe, StreamParameter
 from xrpl.models.requests.ledger_data import LedgerData
-from typing import Union
+from typing import Callable, Union
 import logging
 import bson
 from .data import DataSource
@@ -17,12 +17,13 @@ logger = logging.getLogger(__name__)
 class LedgerCreationDataSource(DataSource):
     def __init__(self,
         wss_url: str = "wss://s1.ripple.com",
+        done_callback: Callable[[], None] = None,
     ):
         self.wss_url = wss_url
         self.async_queue = asyncio.Queue()
         self.is_stop = False
         self.populate_task = None
-
+        self.done_callback = done_callback
 
     def start(self):
         self.populate_task = asyncio.create_task(self._start())
@@ -47,8 +48,15 @@ class LedgerCreationDataSource(DataSource):
         return self
 
     async def __anext__(self):
+        # TODO: refactor to abstract method
         if self.is_stop and self.async_queue.empty():
-            raise StopAsyncIteration
+            try:
+                if self.done_callback:
+                    self.done_callback()
+            except Exception as e:
+                traceback.print_exc(file = sys.stdout)
+            finally:
+                raise StopAsyncIteration
 
         return await self.async_queue.get()
 
@@ -59,6 +67,7 @@ class LedgerObjectDataSource(DataSource):
         ledger_index: Union[int,str] = "current",
         is_attach_execution_id: bool = True,
         is_attach_seq: bool = True,
+        done_callback: Callable[[], None] = None,
     ):
         # more than efficient for a request-response query pattern
         #  - server is not pushing any information; must have a request
@@ -76,6 +85,8 @@ class LedgerObjectDataSource(DataSource):
 
         self.message_sequence = 0
         self.execution_id = str(bson.ObjectId())
+
+        self.done_callback = done_callback
 
 
     def start(self):
@@ -137,7 +148,14 @@ class LedgerObjectDataSource(DataSource):
         return self
 
     async def __anext__(self):
+        # TODO: refactor to abstract method
         if self.is_stop and self.async_queue.empty():
-            raise StopAsyncIteration
+            try:
+                if self.done_callback:
+                    self.done_callback()
+            except Exception as e:
+                traceback.print_exc(file = sys.stdout)
+            finally:
+                raise StopAsyncIteration
 
         return await self.async_queue.get()

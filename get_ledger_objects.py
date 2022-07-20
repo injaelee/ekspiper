@@ -39,11 +39,14 @@ async def amain():
     ledger_record_source_sink = QueueSourceSink(
         name = "ledger_record_source_sink",
     )
+    def stop_data_source():
+        ledger_record_source_sink.stop()
 
     # setup the ledger object data source
     ledger_object_data_source = LedgerObjectDataSource(
         rpc_client = async_rpc_client,
         ledger_index = ledger_index,
+        done_callback = stop_data_source,
     )
     ledger_object_data_source.start()
 
@@ -79,10 +82,6 @@ async def amain():
     flow_ledger_data_schema_task = asyncio.create_task(flow_ledger_data_schema.aexecute(
         message_iterator = ledger_record_source_sink
     ))
-
-
-    # TODO: create callbacks for graceful stops
-    # ledger_record_source_sink.stop()
 
     # wait until all are done
     await asyncio.gather(
