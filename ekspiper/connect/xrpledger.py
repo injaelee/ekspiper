@@ -53,7 +53,7 @@ class LedgerCreationDataSource(DataSource):
         return await self.async_queue.get()
 
 
-class LedgerObjectDataSource:
+class LedgerObjectDataSource(DataSource):
     def __init__(self,
         rpc_client: AsyncJsonRpcClient,
         ledger_index: Union[int,str] = "current",
@@ -118,6 +118,9 @@ class LedgerObjectDataSource:
                     self.message_sequence,
                 )
                 await self.async_queue.put(ledger_obj)
+
+            # TODO: remove later
+            # self.is_stop = True
 
             # put into auto stop if last marker
             if not next_marker:

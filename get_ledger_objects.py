@@ -11,7 +11,13 @@ from ekspiper.processor.base import PassthruProcessor
 from ekspiper.processor.attribute import AttributeCollectionProcessor
 from fluent.asyncsender import FluentSender
 from ekspiper.schema.xrp import XRPLObjectSchema
+from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
+from prometheus_client import (
+    CollectorRegistry,
+    generate_latest,
+    push_to_gateway,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +31,7 @@ async def amain():
     # setup fluent client
     fluent_sender = FluentSender(
         "test",
-        host = "0.0.0.0", 
+        host = "0.0.0.0",
         port = 25225,
     )
 
@@ -74,9 +80,27 @@ async def amain():
         message_iterator = ledger_record_source_sink
     ))
 
-    # Flow: Fluent Export
-    await asyncio.sleep(100)
+
+    # TODO: create callbacks for graceful stops
+    # ledger_record_source_sink.stop()
+
+    # wait until all are done
+    await asyncio.gather(
+        flow_ledger_obj_export_task,
+        flow_ledger_data_schema_task,
+    )
+
+    logger.info("[get_ledger_objects] completed run.")
 
 
 if __name__ == "__main__":
-    asyncio.run(amain())
+    registry = CollectorRegistry()
+
+    with ScriptExecutionMetrics(
+        prom_registry = registry,
+        job_name = "get_ledger_objs",
+    ):
+        asyncio.run(amain())
+
+    print(generate_latest(registry))
+    #push_to_gateway('localhost:9091', job = 'batchA', registry = registry)
