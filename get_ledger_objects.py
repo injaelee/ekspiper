@@ -31,6 +31,7 @@ logging.basicConfig(level = logging.INFO)
 """
 async def amain(
     xrpl_endpoint: str = "https://s2.ripple.com:51234",
+    fluent_tag: str = "test",
     fluent_host: str = "0.0.0.0",
     fluent_port: int = 25225,
 ):
@@ -39,7 +40,7 @@ async def amain(
 
     # setup fluent client
     fluent_sender = FluentSender(
-        "test",
+        fluent_tag,
         host = fluent_host,
         port = fluent_port,
     )
@@ -146,6 +147,7 @@ if __name__ == "__main__":
     ):
         asyncio.run(amain(
             xrpl_endpoint = args.xrpl_endpoint,
+            fluent_tag = args.fluent_tag,
             fluent_host = args.fluent_host,
             fluent_port = args.fluent_port,
         ))
