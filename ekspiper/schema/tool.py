@@ -1,7 +1,7 @@
 import argparse
 from collections import namedtuple
 from google.cloud import bigquery
-from .schema.xrp import XRPLObjectSchema, XRPLTransactionSchema
+from xrp import XRPLObjectSchema, XRPLTransactionSchema
 from typing import Dict, List, Set
 import datetime
 import logging
@@ -136,7 +136,6 @@ class BigQueryTableBuilder:
         table_name: str,
         schema: List[bigquery.SchemaField],
     ):
-
         # set up the 'GOOGLE_APPLICATION_CREDENTIALS' env variable
         client = bigquery.Client()
 
@@ -147,6 +146,27 @@ class BigQueryTableBuilder:
         )
         table = client.create_table(table)  # Make an API request.
         print(f"Created table {table.project}.{table.dataset_id}.{table.table_id}")
+
+
+class BigQueryTableUpdater:
+    def update(self,
+        project_name: str,
+        dataset_name: str,
+        table_name: str,
+        schema: List[bigquery.SchemaField],
+    ):
+        # set up the 'GOOGLE_APPLICATION_CREDENTIALS' env variable
+        client = bigquery.Client()
+
+        table_id = f"{project_name}.{dataset_name}.{table_name}"
+        table = bigquery.Table(
+            table_id,
+            schema = schema,
+        )
+
+        #column_names = [x.name for x in table.schema]
+        table = client.update_table(table, ['schema'])  # Make an API request.
+        print(f"Updated table {table.project}.{table.dataset_id}.{table.table_id}")
 
 
 class SchemaBuilderTest(unittest.TestCase):
@@ -211,6 +231,26 @@ class SchemaBuilderTest(unittest.TestCase):
         equal_schema_fields(self, expected_schema_fields, bg_schema_fields)
 
 
+def update_bigquery_table(
+    project_name: str,
+    dataset_name: str,
+    table_name: str,
+    schema: Dict[str, Set[str]],
+):
+    bg_query_schema_builder = BigQuerySchemaBottomUpBuilder()
+    bg_schema_fields = bg_query_schema_builder.build(
+        schema_dict = schema,
+    )
+
+    bg_query_schema_updater = BigQueryTableUpdater()
+    bg_schema_fields = bg_query_schema_updater.update(
+        project_name = project_name,
+        dataset_name = dataset_name,
+        table_name = table_name,
+        schema = bg_schema_fields,
+    )
+
+
 def build_bigquery_table(
     project_name: str,
     dataset_name: str,
@@ -224,11 +264,12 @@ def build_bigquery_table(
 
     bq_table_builder = BigQueryTableBuilder()
     bq_table_builder.build(
-        project_name = "ripplex-ilee-pipeline",
-        dataset_name = "raw_xrpl_data",
+        project_name = project_name,
+        dataset_name = dataset_name,
         table_name = table_name,
         schema = bg_schema_fields,
     )
+
 
 def print_schema(
     schema: Dict[str, Set[str]],
@@ -274,6 +315,11 @@ if __name__ == "__main__":
         help = "print the specified schema",
         action="store_true",
     )
+    arg_parser.add_argument(
+        "-u", "--update",
+        help = "update the table with the schema",
+        action="store_true",
+    )
 
     cli_args = arg_parser.parse_args()
 
@@ -288,6 +334,15 @@ if __name__ == "__main__":
 
     if cli_args.print:
         print_schema(schema)
+
+    elif cli_args.update:
+        update_bigquery_table(
+            project_name = cli_args.project,
+            dataset_name = cli_args.dataset,
+            table_name = cli_args.table,
+            schema = schema,
+        )
+
     else:
         build_bigquery_table(
             project_name = cli_args.project,

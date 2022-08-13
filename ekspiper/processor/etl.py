@@ -42,7 +42,7 @@ class ETLTemplateProcessor(EntryProcessor):
         if not validated_entry:
             logger.warn("There were NO valid attributes")
         return [self.transformer.transform(validated_entry)]
-        
+
 
 class GenericValidator(Validator):
     def __init__(self,
@@ -76,8 +76,9 @@ class GenericValidator(Validator):
             # case sensitive
             if not allowed_data_type_set:
                 logger.warning(
-                    "removing key['%s'] that is not defined in the schema", 
+                    "removing key['%s'] that is not defined in the schema: %s",
                     full_key,
+                    entry_dict[current_key],
                 )
                 # remove the key
                 del entry_dict[current_key]
@@ -86,8 +87,9 @@ class GenericValidator(Validator):
             # check whether the data entry is allowed
             if type(entry_dict[current_key]) not in allowed_data_type_set:
                 logger.warning(
-                    "removing key['%s'] that is the wrong data type", 
+                    "removing key['%s'] that is the wrong data type: %s",
                     full_key,
+                    entry_dict[current_key],
                 )
                 del entry_dict[current_key]
                 continue
@@ -123,7 +125,7 @@ class XRPLObjectTransformer(Transformer):
         working_data_entry = copy.deepcopy(data_entry)
 
         for k in ["Balance", "SendMax", "TakerGets", "TakerPays"]:
-            
+
             if k not in working_data_entry:
                 continue
 
@@ -166,7 +168,7 @@ class XRPLTransactionTransformer(Transformer):
         working_data_entry = copy.deepcopy(data_entry)
 
         for k in ["Amount", "SendMax", "TakerGets", "TakerPays"]:
-            
+
             if k not in working_data_entry:
                 continue
 
@@ -217,5 +219,31 @@ class XRPLTransactionTransformer(Transformer):
                             "issuer": "",
                             "value": node_dict[k][kk][kkk],
                         }
+
+        return working_data_entry
+
+class XRPLObjectTransformer(Transformer):
+    def transform(self,
+        data_entry: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        "Amount": {str, dict},
+        "Balance": {str, dict},
+        "SendMax": {str, dict},
+        "TakerGets": {str, dict},
+        "TakerPays": {str, dict},
+        """
+        working_data_entry = copy.deepcopy(data_entry)
+        for k in ["Amount", "Balance", "SendMax", "TakerGets", "TakerPays"]:
+
+            if k not in working_data_entry:
+                continue
+
+            if type(working_data_entry.get(k)) is not dict:
+                working_data_entry[k] = {
+                    "currency": "XRP",
+                    "issuer": "",
+                    "value": data_entry[k],
+                }
 
         return working_data_entry

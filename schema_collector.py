@@ -12,11 +12,6 @@ from ekspiper.processor.base import PassthruProcessor
 from ekspiper.processor.attribute import AttributeCollectionProcessor
 from fluent.asyncsender import FluentSender
 from ekspiper.schema.xrp import XRPLObjectSchema
-from ekspiper.processor.etl import (
-    ETLTemplateProcessor,
-    GenericValidator,
-    XRPLObjectTransformer,
-)
 from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
 from prometheus_client import (
@@ -36,19 +31,9 @@ logging.basicConfig(level = logging.INFO)
 """
 async def amain(
     xrpl_endpoint: str = "https://s2.ripple.com:51234",
-    fluent_tag: str = "test",
-    fluent_host: str = "0.0.0.0",
-    fluent_port: int = 25225,
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     ledger_index = await get_latest_validated_ledger_sequence(async_rpc_client) - 1
-
-    # setup fluent client
-    fluent_sender = FluentSender(
-        fluent_tag,
-        host = fluent_host,
-        port = fluent_port,
-    )
 
     # setup the ledger object data source
     ledger_object_data_source = LedgerObjectDataSource(
@@ -61,13 +46,11 @@ async def amain(
     #
     ledger_obj_export_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = ledger_obj_export_pc_map_builder.with_processor(
-        ETLTemplateProcessor(
-            validator = GenericValidator(XRPLObjectSchema.SCHEMA),
-            transformer = XRPLObjectTransformer(),
+        AttributeCollectionProcessor(
+            init_attribute_mapping = XRPLObjectSchema.SCHEMA,
         )
-    ).add_fluent_output_collector(
-        fluent_sender = fluent_sender,
-        tag_name = "ledger_obj",
+    ).with_stdout_output_collector(
+        tag_name = "ledger_obj_schema",
     ).build()
 
     flow_ledger_obj_export = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
@@ -87,27 +70,6 @@ def parse_arguments() -> argparse.Namespace:
     arg_parser = argparse.ArgumentParser()
 
     arg_parser.add_argument(
-        "-ft",
-        "--fluent_tag",
-        help = "specify the name to tag the FluentD/Bit entries",
-        type = str,
-        default = "test", # use prod for forwarding to GCP
-    )
-    arg_parser.add_argument(
-        "-fh",
-        "--fluent_host",
-        help = "specify the FluentD/Bit host",
-        type = str,
-        default = "0.0.0.0",
-    )
-    arg_parser.add_argument(
-        "-fp",
-        "--fluent_port",
-        help = "specify the FluentD/Bit port",
-        type = int,
-        default = 25225,
-    )
-    arg_parser.add_argument(
         "-x",
         "--xrpl_endpoint",
         help = "specify the rippled RESTful API endpoint",
@@ -124,14 +86,10 @@ if __name__ == "__main__":
 
     with ScriptExecutionMetrics(
         prom_registry = registry,
-        job_name = "get_ledger_objs",
+        job_name = "schema_collector",
     ):
         asyncio.run(amain(
             xrpl_endpoint = args.xrpl_endpoint,
-            fluent_tag = args.fluent_tag,
-            fluent_host = args.fluent_host,
-            fluent_port = args.fluent_port,
         ))
 
     print(generate_latest(registry))
-    #push_to_gateway('localhost:9091', job = 'batchA', registry = registry)
