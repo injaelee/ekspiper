@@ -1,4 +1,5 @@
 import asyncio
+from ekspiper.util.callable import RetryWrapper
 from xrpl.asyncio.clients import (
     AsyncWebsocketClient,
     AsyncJsonRpcClient,
@@ -93,15 +94,20 @@ class LedgerObjectDataSource(DataSource):
         self.populate_task = asyncio.create_task(self._start())
 
     async def _start(self):
+        retry_wrapper = RetryWrapper()
+
         next_marker = None
         ledger_index = self.ledger_index
         while not self.is_stop:
 
-            response = await self.rpc_client.request(LedgerData(
-                ledger_index = self.ledger_index,
-                marker = next_marker,
-            ))
-            
+            response = await retry_wrapper.aretry(
+                LedgerData(
+                    ledger_index = self.ledger_index,
+                    marker = next_marker,
+                ),
+                self.rpc_client.request,
+            )
+
             # check whether the message was successful and retry
             if not response.is_successful():
                 logging.error("[FAILED] response: %s", response)

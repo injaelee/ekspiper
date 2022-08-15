@@ -1,8 +1,8 @@
 from ekspiper.template.processor import TemplateFlow, ProcessCollectorsMap
 from ekspiper.processor.base import EntryProcessor
 from ekspiper.collector.output import OutputCollector
-from ekspiper.source.queue import QueueSource
-from typing import Any
+from ekspiper.connect.queue import QueueSourceSink
+from typing import Any, List, Tuple
 import asyncio
 import unittest
 
@@ -10,8 +10,8 @@ import unittest
 class _TestStringProcessor(EntryProcessor):
     async def aprocess(self,
         entry: str,
-    ) -> (str, str):
-        return (entry + '_a', entry + '_b')
+    ) -> List[Tuple[str, str]]:
+        return [(entry + '_a', entry + '_b')]
 
 
 class _TestOutputCollector(OutputCollector):
@@ -24,7 +24,8 @@ class _TestOutputCollector(OutputCollector):
     async def acollect_output(self,
         entry: Any,
     ):
-        self.outputs.append(self.prefix + entry)
+        for v in entry:
+            self.outputs.append(self.prefix + v)
 
 
 class TemplateFlowTest(unittest.IsolatedAsyncioTestCase):
@@ -50,7 +51,7 @@ class TemplateFlowTest(unittest.IsolatedAsyncioTestCase):
         async_queue.put_nowait("ONE")
         async_queue.put_nowait("TWO")
         async_queue.put_nowait("THREE")
-        q = QueueSource(async_queue)
+        q = QueueSourceSink(async_queue)
         
         # stop immediately to start the draining mode
         # so that we don't indefinitely wait

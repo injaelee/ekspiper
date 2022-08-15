@@ -1,4 +1,4 @@
-from ekspiper.processor.base import RetryWrapper
+from ekspiper.util.callable import RetryWrapper
 import unittest
 
 

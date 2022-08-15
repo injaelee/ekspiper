@@ -2,7 +2,7 @@ import collections
 from typing import List
 import logging
 from ekspiper.collector.output import OutputCollector
-from ekspiper.processor.base import RetryWrapper
+from ekspiper.util.callable import RetryWrapper
 
 
 logger = logging.getLogger(__name__)
