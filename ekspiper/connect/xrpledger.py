@@ -136,9 +136,6 @@ class LedgerObjectDataSource(DataSource):
                 )
                 await self.async_queue.put(ledger_obj)
 
-            # TODO: remove later
-            # self.is_stop = True
-
             # put into auto stop if last marker
             if not next_marker:
                 self.is_stop = True
