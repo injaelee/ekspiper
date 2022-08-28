@@ -14,31 +14,30 @@ python get_ledger_objects.py
 ```
 
 # General Structure and Components
-Behavior is constructed using composite components designed to run under a template. Each component has a responsibility and individually testable.
+Behavior is constructed using composite components designed to run under a template. Each component has a responsibility and individually testable. See the `template.TemplateFlow` class for the details. The general flow of the template is the following.
 
-## Templatized Processor Flow
+```python
+for message in iterator:
+
+  for pc in processor_collectors_maps:
+
+    outputs = pc.processor.process(message)
+
+    for o in outputs:
+
+      for c in pc.collectors:
+
+        c.collect_output(output)
 ```
-# the major components are:
-#   - datasource_iterator
-#   - process_collectors
-#     - processor
-#     - list of collectors
-#
-for data in datasource_iterator:
-    for pc in process_collectors_list:
-        outputs = pc.processor.process(data)
-        for o in outputs:
-            for c in pc.collectors:
-                c.collect_output(o) 
-```
-## Message Iterator
-- TODO
 
-## Processor
-- TODO
+The key components that make up the flow are:
+- an implementation of `connect.DataSource`: the `iterator`
+- implementation of `processor.EntryProcessor`: the `processor` in the map
+- an implementation of `collector.OutputCollector`: a list of `collectors` in the map
 
-## Output Collector
-- TODO
+## Note: Special Type `QueueSourceSink`
+This type acts as a glue between the templatized flows. It may act as input to one flow while acting as a collector to another flow.
+
 
 # Flows
 Check out the "build_template_flows" method in `server_container.py`.
