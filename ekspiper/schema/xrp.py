@@ -354,6 +354,7 @@ class XRPLObjectSchema:
         "IndexNext": {str},
         "IndexPrevious": {str},
         "Indexes": {list},
+        "InvoiceID": {str},
         "LastLedgerSequence": {int},
         "LedgerEntryType": {str},
         "LowLimit": {dict},
