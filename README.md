@@ -11,6 +11,12 @@ python server_container.py
 For downloading/exporting all the ledger objects in a given ledger index:
 ```bash
 python get_ledger_objects.py
+
+-- examples
+--
+time python get_ledger_objects.py -ft prod -x https://73322D636C696F.ripple.com:51233
+time python get_ledger_objects.py -ft devnet -x https://s.devnet.rippletest.net:51234
+
 ```
 
 # General Structure and Components
