@@ -1,5 +1,5 @@
 import unittest
-from ekspiper.collector.attribute import AttributeTypeMappingCollector
+from ekspiper.schema.attribute import AttributeTypeMappingCollector
 
 
 class CollectorTestCases(unittest.TestCase):
@@ -57,3 +57,20 @@ class CollectorTestCases(unittest.TestCase):
 
         # number of keys must match
         self.assertEqual(len(answer_dict), len(attribute_type_mapping))
+
+    def test_nested(self):
+        structured_data_entries = [
+            # 1
+            {
+                "nested-list-1": [
+                    {"AuthAccount": {"Account": "rMKXGCbJ5d8LbrqthdG46q3f969MVK2Qeg"}},
+                    {"AuthAccount": {"Account": "rBepJuTLFJt3WmtLXYAxSjtBWAeQxVbncv"}}
+                ],
+            },
+        ]
+        type_mapping_collector = AttributeTypeMappingCollector()
+        for data_entry in structured_data_entries:
+            type_mapping_collector.collect_attributes(data_entry)
+
+        attribute_type_mapping = type_mapping_collector.get_mapping()
+        print(attribute_type_mapping)
