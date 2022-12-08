@@ -111,10 +111,11 @@ class WalletManager:
         ).with_wallet_secret(
             wallet_secret,
         ).build()
-        import pdb; pdb.set_trace()
+
         print("----------------------------")
         print(f"seed: {wallet.seed}")
         print(f"seq : {wallet.sequence}")
+
         return wallet
 
     def save(self):
