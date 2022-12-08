@@ -16,6 +16,7 @@ from typing import Dict, Union, Set
 import json
 import logging
 import sys
+import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -62,30 +63,96 @@ class WalletBuilder:
 Build the wallet through the faucet
 
 """
-def create_new_wallet(
-    xrpl_client: JsonRpcClient,
-):
-    wallet_builder = WalletBuilder()
-    the_wallet = wallet_builder.with_xrpl_client(
-        xrpl_client).build()
-    print("----------------------------")
-    print(f"seed: {the_wallet.seed}")
-    print(f"seq : {the_wallet.sequence}")
+class WalletManager:
+    def __init__(self,
+        xrpl_client: JsonRpcClient,
+        input_filepath: str = None,
+    ):
+        self.xrpl_client = xrpl_client
+        self.input_filepath = input_filepath
+        self.wallet_map = {}
+        self.load(self.input_filepath)
 
-def existing_wallet(
-    xrpl_client: JsonRpcClient,
-    wallet_secret: WalletSecret,
-):
-    wallet_builder = WalletBuilder()
-    wallet = wallet_builder.with_xrpl_client(
-        xrpl_client,
-    ).with_wallet_secret(
-        wallet_secret,
-    ).build()
-    print("----------------------------")
-    print(f"seed: {wallet.seed}")
-    print(f"seq : {wallet.sequence}")
-    return wallet
+    @classmethod
+    def create_new_wallet(cls,
+        xrpl_client: JsonRpcClient,
+    ):
+        wallet_builder = WalletBuilder()
+        the_wallet = wallet_builder.with_xrpl_client(
+            xrpl_client).build()
+        print("----------------------------")
+        print(f"seed: {the_wallet.seed}")
+        print(f"seq : {the_wallet.sequence}")
+        return the_wallet
+
+    def register_named_wallet(self,
+        wallet_name: str,
+        wallet: xrpl.wallet.main.Wallet,
+    ):
+        self.wallet_map[wallet_name] = wallet
+
+    def get_named_wallet(self,
+        wallet_name: str,
+        do_create_if_not_exist: bool = False,
+    ) -> xrpl.wallet.main.Wallet:
+        if do_create_if_not_exist and wallet_name not in self.wallet_map:
+            wallet = WalletManager.create_new_wallet(self.xrpl_client)
+            self.wallet_map[wallet_name] = wallet
+
+        return self.wallet_map.get(wallet_name)
+
+    def build_wallet_from_secret(self,
+        wallet_name: str,
+        wallet_secret: WalletSecret,
+    ) -> xrpl.wallet.main.Wallet:
+        wallet_builder = WalletBuilder()
+        wallet = wallet_builder.with_xrpl_client(
+            self.xrpl_client,
+        ).with_wallet_secret(
+            wallet_secret,
+        ).build()
+        import pdb; pdb.set_trace()
+        print("----------------------------")
+        print(f"seed: {wallet.seed}")
+        print(f"seq : {wallet.sequence}")
+        return wallet
+
+    def save(self):
+        with open(self.input_filepath, "w") as yml_fd:
+
+            yaml_content = {"wallets": [{"name": k, "secret": v.seed} for k, v in self.wallet_map.items()]}
+
+            yaml.dump(yaml_content, yml_fd)
+
+            logger.info(
+                "WalletManager.saved: saved '%d' wallets",
+                len(self.wallet_map),
+            )
+
+    def load(self,
+        input_filepath: str,
+    ):
+        with open(input_filepath, "r") as yml_fd:
+            yml_content_itr = yaml.safe_load_all(yml_fd)
+
+            for yml_body_entry in yml_content_itr:
+
+                if type(yml_body_entry) != dict:
+                    continue
+
+                for wallet_entry in yml_body_entry.get("wallets", []):
+
+                    wallet_name = wallet_entry.get("name")
+                    wallet = self.build_wallet_from_secret(
+                        wallet_name,
+                        WalletSecret(wallet_entry.get("secret"), 0),
+                    )
+                    self.wallet_map[wallet_name] = wallet
+
+            logger.info(
+                "WalletManager.load: loaded '%d' wallets",
+                len(self.wallet_map),
+            )
 
 # ------------------------------------------------------------------------------------------------- #
 #                                                                                                   #
@@ -709,37 +776,27 @@ if __name__ == "__main__":
     # create wallets if you need to
     # just uncomment
     # create_new_wallet(xrpl_client)
-
-    import sys
-    sys.exit()
-
-    # create the token issuer aka. cold wallet
-    issuer_wallet = existing_wallet(
-        xrpl_client,
-        WalletSecret("sEdSWKLe1PY6Pz4wVDk4YPBrN5aFnD9", 0),
+    wallet_manager = WalletManager(
+        xrpl_client = xrpl_client,
+        input_filepath = "tmp.yml",
     )
-
-    # create the token distributor wallet that is going to
-    # distribute/circulate the token to other accounts
-    #
-    distributor_wallet = existing_wallet(
-        xrpl_client,
-        WalletSecret("sspsuieBpXAU92wE7J61RMoH96mns", 0),
+    issuer_wallet = wallet_manager.get_named_wallet(
+        "issuer",
+        True,
     )
-
-    # just a user wallet from user 'roaring'
-    #
-    roaring_wallet = existing_wallet(
-        xrpl_client,
-        WalletSecret("sh5pRA72AjHUb5cXRaHH5P8vY7GWP", 0),
+    distributor_wallet = wallet_manager.get_named_wallet(
+        "distributor",
+        True,
     )
-
-    # just a user wallet from user 'kitty'
-    #
-    kitty_wallet = existing_wallet(
-        xrpl_client,
-        WalletSecret("shw3XnErVtiTzXpKP6kxse7dscbXV", 0),
+    roaring_wallet = wallet_manager.get_named_wallet(
+        "roaring",
+        True,
     )
+    kitty_wallet = wallet_manager.get_named_wallet(
+        "kitty",
+        True,
+    )
+    wallet_manager.save()
 
     # edit_issuer_account_set(xrpl_client, issuer_wallet)
 
