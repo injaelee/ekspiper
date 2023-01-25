@@ -88,7 +88,7 @@ class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
         if self.is_include_ledger_index:
             ledger_index = entry.get("ledger").get("ledger_index")
             for txn in transactions:
-                txn["_ledger_index"] = ledger_index
+                txn["_LedgerIndex"] = ledger_index
 
         return transactions
 
@@ -145,7 +145,7 @@ class PaymentTransactionSummaryProcessor(EntryProcessor):
         # obtain the transaction status
         txn_result = entry.get("metaData", {}).get("TransactionResult")
 
-        ledger_index = entry.get("_ledger_index")
+        ledger_index = entry.get("_LedgerIndex")
         txn_hash = entry.get("hash")
 
         step_sizes_str = "|" + "\t".join(step_sizes) if len(step_sizes) > 0 else ""
