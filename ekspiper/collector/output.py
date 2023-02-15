@@ -52,7 +52,7 @@ class STDOUTCollector(OutputCollector):
     async def acollect_output(self,
         entry: Dict[str, Any]
     ):
-        if self.is_simplified:
+        if False:
             if type(entry) == dict:
                 print("[STDOUTCollector::%s] Received entry keys: %s" % (
                     self.tag_name,

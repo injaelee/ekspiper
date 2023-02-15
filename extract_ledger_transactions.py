@@ -1,5 +1,8 @@
 import argparse
 import asyncio
+import queue
+from logging.handlers import QueueHandler, QueueListener
+
 from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
@@ -17,7 +20,7 @@ from ekspiper.processor.etl import (
     GenericValidator,
     XRPLTransactionTransformer,
 )
-from ekspiper.schema.xrp import XRPLTransactionSchema
+from ekspiper.schema.xrp import XRPLDevnetSchema
 from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -30,6 +33,11 @@ from prometheus_client import (
 
 
 logger = logging.getLogger(__name__)
+log_queue = queue.Queue(-1)
+queue_handler = QueueHandler(log_queue)
+logger.addHandler(queue_handler)
+listener = QueueListener(log_queue)
+listener.start()
 #logging.basicConfig(level=logging.INFO)
 
 
@@ -45,6 +53,8 @@ async def amain(
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     start_index = await start_ledger_sequence(async_rpc_client)
+
+    logger.info("here 2")
 
     # setup fluent client
     fluent_sender = FluentSender(
@@ -116,10 +126,16 @@ async def amain(
     txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
-            validator = GenericValidator(XRPLTransactionSchema.SCHEMA),
+            validator = GenericValidator(XRPLDevnetSchema.SCHEMA),
             transformer = XRPLTransactionTransformer(),
         )
-    ).with_stdout_output_collector(tag_name = "transactions", is_simplified = True).build()
+    ).with_stdout_output_collector(
+        tag_name = "transactions",
+        is_simplified = True
+    ).add_fluent_output_collector(
+        tag_name="devnet",
+        fluent_sender=fluent_sender
+    ).build()
     # TODO: Enable when fluent is ready
     #).add_fluent_output_collector(
     #    tag_name = "ledger_txn",
@@ -133,6 +149,8 @@ async def amain(
     # TODO: for now
     #asyncio.gather(*flow_ledger_detail_tasks)
     await flow_txn_record_task
+
+    listener.stop()
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -169,6 +187,7 @@ def parse_arguments() -> argparse.Namespace:
 
     return arg_parser.parse_args()
 
+
 if __name__ == "__main__":
     args = parse_arguments()
     registry = CollectorRegistry()
@@ -177,6 +196,7 @@ if __name__ == "__main__":
         prom_registry = registry,
         job_name = "extract_ledger_txns",
     ):
+        logger.warning("running other main")
         asyncio.run(amain(
             xrpl_endpoint = args.xrpl_endpoint,
             fluent_tag = args.fluent_tag,

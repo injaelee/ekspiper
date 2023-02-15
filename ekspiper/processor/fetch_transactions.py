@@ -88,7 +88,7 @@ class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
         if self.is_include_ledger_index:
             ledger_index = entry.get("ledger").get("ledger_index")
             for txn in transactions:
-                txn["_LedgerIndex"] = ledger_index
+                txn["_LedgerIndex"] = int(ledger_index)
 
         return transactions
 

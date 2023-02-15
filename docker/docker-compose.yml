@@ -4,7 +4,7 @@ services:
   fluent-bit:
     # Using specific version of the Fluent Bit image
     #
-    image: "fluent/fluent-bit:1.9.6"
+    image: "fluent/fluent-bit:2.0.8"
 
     ports:
       # {host port}:{container port}
@@ -20,4 +20,4 @@ services:
       - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
       # this file is not provided as part of the repository
-      - ~/.gcp/ripplex-ilee-pipeline-d56f414198f3.json:/fluent-bit/etc/credentials.json
+      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json

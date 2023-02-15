@@ -15,6 +15,8 @@ from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
     XRPLExtractTransactionsFromLedgerProcessor,
 )
+from logging.handlers import QueueHandler, QueueListener
+
 from fluent.asyncsender import FluentSender
 from ekspiper.schema.xrp import (
     XRPLTransactionSchema,
@@ -27,10 +29,16 @@ from prometheus_client import (
     generate_latest,
     push_to_gateway,
 )
+import queue
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level = logging.INFO)
+log_queue = queue.Queue(-1)
+queue_handler = QueueHandler(log_queue)
+logger.addHandler(queue_handler)
+listener = QueueListener(log_queue)
+listener.start()
 
 
 """
@@ -164,6 +172,7 @@ async def amain_txns(
         flow_ledger_obj_export_task,
     )
 
+    listener.stop()
     logger.info("[get_ledger_objects] completed run.")
 
 

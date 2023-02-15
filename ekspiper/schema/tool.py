@@ -1,7 +1,7 @@
 import argparse
 from collections import namedtuple
 from google.cloud import bigquery
-from xrp import XRPLObjectSchema, XRPLTransactionSchema
+from xrp import XRPLObjectSchema, XRPLTransactionSchema, XRPLDevnetSchema
 from typing import Dict, List, Set
 import datetime
 import logging
@@ -307,7 +307,7 @@ if __name__ == "__main__":
         "-s", "--schema",
         help = "specify the schema type",
         type = str,
-        choices=["", "ledger_object", "transactions"],
+        choices=["", "ledger_object", "transactions", "devnet"],
         default = "",
     )
     arg_parser.add_argument(
@@ -326,6 +326,7 @@ if __name__ == "__main__":
     schema_dict = {
         "ledger_object": XRPLObjectSchema.SCHEMA,
         "transactions": XRPLTransactionSchema.SCHEMA,
+        "devnet": XRPLDevnetSchema.SCHEMA,
     }
 
     schema = schema_dict.get(cli_args.schema)

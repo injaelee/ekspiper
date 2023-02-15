@@ -1,6 +1,6 @@
 from .base import EntryProcessor
 from collections import namedtuple
-from ekspiper.schema.xrp import XRPLObjectSchema
+from ekspiper.schema.xrp import XRPLObjectSchema, XRPLDevnetSchema
 from fluent import sender
 from typing import Any, Dict, List
 import copy
@@ -140,87 +140,151 @@ class XRPLObjectTransformer(Transformer):
 
 
 class XRPLTransactionTransformer(Transformer):
+    def __init__(self, schema=XRPLDevnetSchema.SCHEMA):
+        self.toTransform = set()
+
+        for key, value in schema.items():
+            if len(value) > 1:
+                self.toTransform.add(key)
+
     def transform(self,
-        data_entry: Dict[str, Any],
-    ) -> Dict[str, Any]:
+                  data_entry: Dict[str, Any],
+                  ) -> Dict[str, Any]:
         """
-        "Amount": {str, dict},
-        "SendMax": {str, dict},
-        "TakerGets": {str, dict},
-        "TakerPays": {str, dict},
-        "metaData.AffectedNodes.CreatedNode.NewFields.Balance": {str, dict},
-        "metaData.AffectedNodes.CreatedNode.NewFields.TakerGets": {str, dict},
-        "metaData.AffectedNodes.CreatedNode.NewFields.TakerPays": {str, dict},
-        "metaData.AffectedNodes.DeletedNode.FinalFields.Balance": {str, dict},
-        "metaData.AffectedNodes.DeletedNode.FinalFields.TakerGets": {str, dict},
-        "metaData.AffectedNodes.DeletedNode.FinalFields.TakerPays": {str, dict},
-        "metaData.AffectedNodes.DeletedNode.PreviousFields.TakerGets": {str, dict},
-        "metaData.AffectedNodes.DeletedNode.PreviousFields.TakerPays": {str, dict},
-        "metaData.AffectedNodes.ModifiedNode.FinalFields.Balance": {str, dict},
-        "metaData.AffectedNodes.ModifiedNode.FinalFields.TakerGets": {str, dict},
-        "metaData.AffectedNodes.ModifiedNode.FinalFields.TakerPays": {str, dict},
-        "metaData.AffectedNodes.ModifiedNode.PreviousFields.Balance": {str, dict},
-        "metaData.AffectedNodes.ModifiedNode.PreviousFields.TakerGets": {str, dict},
-        "metaData.AffectedNodes.ModifiedNode.PreviousFields.TakerPays": {str, dict},
-        "metaData.DeliveredAmount": {str, dict},
-        "metaData.delivered_amount": {str, dict},
+        turns all string data entries with double types into dictionaries based on schema
+
+        a: "str"
+        b.c: "str"
+
+        {
+          a: "val"
+          b: {
+            c: "val2"
+            d: {
+              e: "ha"
+            }
+          }
+        }
+
+        :param data_entry: data to transform
+        :return: the new data entry
         """
         working_data_entry = copy.deepcopy(data_entry)
 
-        for k in ["Amount", "SendMax", "TakerGets", "TakerPays"]:
-
-            if k not in working_data_entry:
-                continue
-
-            if type(working_data_entry.get(k)) is not dict:
-                working_data_entry[k] = {
-                    "currency": "XRP",
-                    "issuer": "",
-                    "value": data_entry[k],
-                }
-
-        meta_data_dict = working_data_entry.get("metaData", {})
-        if not meta_data_dict:
-            return working_data_entry
-
-        for k in ["DeliveredAmount", "delivered_amount"]:
-            if k not in meta_data_dict:
-                continue
-
-            if type(meta_data_dict[k]) is not dict:
-                working_data_entry[k] = {
-                    "currency": "XRP",
-                    "issuer": "",
-                    "value": meta_data_dict[k],
-                }
-
-        affected_nodes = meta_data_dict.get("AffectedNodes", [])
-        if not affected_nodes:
-            return working_data_entry
-
-
-        for node_dict in affected_nodes:
-            for k, kk in [
-                ("CreatedNode", "NewFields"),
-                ("DeletedNode", "FinalFields"),
-                ("ModifiedNode", "FinalFields"),
-                ("ModifiedNode", "PreviousFields"),
-            ]:
-                if k not in node_dict:
-                    continue
-
-                for kkk in ["Balance", "TakerGets", "TakerPays"]:
-                    if kk not in node_dict[k] or kkk not in node_dict[k][kk]:
-                        continue
-
-                    if type(node_dict[k][kk][kkk]) != dict:
-                        node_dict[k][kk][kkk] = {
-                            "currency": "XRP",
-                            "issuer": "",
-                            "value": node_dict[k][kk][kkk],
-                        }
+        for k in self.toTransform:
+            path = k.split(".")
+            self.transformHelper(path, working_data_entry)
 
         return working_data_entry
+
+    def transformHelper(self, path, data):
+        val = data
+        p = path[0]
+
+        for i in range(len(path) - 1):
+            if val is not None and p in val:
+                if type(val[p]) is list:
+                    for d in val[p]:
+                        self.transformHelper(path[i + 1:len(path)], d)
+                    return
+                else:
+                    val = val[p]
+                    p = path[i + 1]
+            else:
+                break
+
+        if p in val and type(val[p]) is not dict:
+            logger.warning("transforming path: " + str(path))
+
+            val[p] = {
+                "currency": "XRP",
+                "issuer": "",
+                "value": val[p],
+            }
+            logger.warning("Transformed to: " + str(val[p]))
+
+
+    # def transform(self,
+    #     data_entry: Dict[str, Any],
+    # ) -> Dict[str, Any]:
+    #     """
+    #     "Amount": {str, dict},
+    #     "SendMax": {str, dict},
+    #     "TakerGets": {str, dict},
+    #     "TakerPays": {str, dict},
+    #     "metaData.AffectedNodes.CreatedNode.NewFields.Balance": {str, dict},
+    #     "metaData.AffectedNodes.CreatedNode.NewFields.TakerGets": {str, dict},
+    #     "metaData.AffectedNodes.CreatedNode.NewFields.TakerPays": {str, dict},
+    #     "metaData.AffectedNodes.DeletedNode.FinalFields.Balance": {str, dict},
+    #     "metaData.AffectedNodes.DeletedNode.FinalFields.TakerGets": {str, dict},
+    #     "metaData.AffectedNodes.DeletedNode.FinalFields.TakerPays": {str, dict},
+    #     "metaData.AffectedNodes.DeletedNode.PreviousFields.TakerGets": {str, dict},
+    #     "metaData.AffectedNodes.DeletedNode.PreviousFields.TakerPays": {str, dict},
+    #     "metaData.AffectedNodes.ModifiedNode.FinalFields.Balance": {str, dict},
+    #     "metaData.AffectedNodes.ModifiedNode.FinalFields.TakerGets": {str, dict},
+    #     "metaData.AffectedNodes.ModifiedNode.FinalFields.TakerPays": {str, dict},
+    #     "metaData.AffectedNodes.ModifiedNode.PreviousFields.Balance": {str, dict},
+    #     "metaData.AffectedNodes.ModifiedNode.PreviousFields.TakerGets": {str, dict},
+    #     "metaData.AffectedNodes.ModifiedNode.PreviousFields.TakerPays": {str, dict},
+    #     "metaData.DeliveredAmount": {str, dict},
+    #     "metaData.delivered_amount": {str, dict},
+    #     """
+    #     working_data_entry = copy.deepcopy(data_entry)
+    #
+    #     for k in ["Amount", "SendMax", "TakerGets", "TakerPays"]:
+    #
+    #         if k not in working_data_entry:
+    #             continue
+    #
+    #         if type(working_data_entry.get(k)) is not dict:
+    #             working_data_entry[k] = {
+    #                 "currency": "XRP",
+    #                 "issuer": "",
+    #                 "value": data_entry[k],
+    #             }
+    #
+    #     meta_data_dict = working_data_entry.get("metaData", {})
+    #     if not meta_data_dict:
+    #         return working_data_entry
+    #
+    #     for k in ["DeliveredAmount", "delivered_amount"]:
+    #         if k not in meta_data_dict:
+    #             continue
+    #
+    #         if type(meta_data_dict[k]) is not dict:
+    #             working_data_entry[k] = {
+    #                 "currency": "XRP",
+    #                 "issuer": "",
+    #                 "value": meta_data_dict[k],
+    #             }
+    #
+    #     affected_nodes = meta_data_dict.get("AffectedNodes", [])
+    #     if not affected_nodes:
+    #         return working_data_entry
+    #
+    #
+    #     for node_dict in affected_nodes:
+    #         for k, kk in [
+    #             ("CreatedNode", "NewFields"),
+    #             ("DeletedNode", "FinalFields"),
+    #             ("ModifiedNode", "FinalFields"),
+    #             ("ModifiedNode", "PreviousFields"),
+    #         ]:
+    #             if k not in node_dict:
+    #                 continue
+    #
+    #             for kkk in ["Balance", "TakerGets", "TakerPays"]:
+    #                 if kk not in node_dict[k] or kkk not in node_dict[k][kk]:
+    #                     continue
+    #
+    #                 if type(node_dict[k][kk][kkk]) != dict:
+    #                     node_dict[k][kk][kkk] = {
+    #                         "currency": "XRP",
+    #                         "issuer": "",
+    #                         "value": node_dict[k][kk][kkk],
+    #                     }
+    #
+    #     return working_data_entry
 
 class XRPLObjectTransformer(Transformer):
     def transform(self,

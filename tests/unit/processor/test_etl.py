@@ -176,3 +176,6 @@ class ETLTests(unittest.TestCase):
         }  }
         transformer = XRPLTransactionTransformer()
         transformed_dict = transformer.transform(test_dict)
+        print(transformed_dict)
+
+        assert transformed_dict is not test_dict
