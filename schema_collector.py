@@ -101,7 +101,7 @@ async def amain_txns(
     # Flow: Obtain Ledger Details
     #
     flow_ledger_detail_tasks = []
-    partition_size = 10
+    partition_size = 100
     for i in range(partition_size):
         async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
 
@@ -201,7 +201,7 @@ def parse_arguments() -> argparse.Namespace:
 """
 # Output could be formatted with:
 ```
-grep ledger_txn_schema amm_devnet.txn.schema.collector | grep 1665633466-91314434 | \
+grep ledger_txn_schema o.schema.txns.testnet | grep 1676525104-27901104 | \
 cut -f2,3 | sed "s/<class '//g" | sed "s/'>, /,/g" | sed "s/'>//g" | \
 awk '{print "\""$1"\": " $2","}'
 ```

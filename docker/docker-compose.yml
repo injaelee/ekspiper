@@ -20,4 +20,4 @@ services:
       - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
       # this file is not provided as part of the repository
-      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
+      - /home/adavoodi/sa-private-key.json:/fluent-bit/etc/credentials.json

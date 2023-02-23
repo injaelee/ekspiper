@@ -19,19 +19,21 @@ class LedgerCreationDataSource(DataSource):
     def __init__(self,
         wss_url: str = "wss://s1.ripple.com",
         done_callback: Callable[[], None] = None,
+        stream_type = StreamParameter.LEDGER,
     ):
         self.wss_url = wss_url
         self.async_queue = asyncio.Queue()
         self.is_stop = False
         self.populate_task = None
         self.done_callback = done_callback
+        self.stream_type = stream_type
 
     def start(self):
         self.populate_task = asyncio.create_task(self._start())
 
     async def _start(self):
         ledger_update_sub_req = Subscribe(
-            streams = [StreamParameter.LEDGER])
+            streams = [self.stream_type])
         async with AsyncWebsocketClient(self.wss_url) as client:
             # one time subscription
             await client.send(ledger_update_sub_req)

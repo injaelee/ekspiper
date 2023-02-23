@@ -20,7 +20,7 @@ from ekspiper.processor.etl import (
     GenericValidator,
     XRPLTransactionTransformer,
 )
-from ekspiper.schema.xrp import XRPLDevnetSchema
+from ekspiper.schema.xrp import XRPLDevnetSchema, XRPLTestnetSchema
 from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -50,11 +50,10 @@ async def amain(
     fluent_tag: str = "test",
     fluent_host: str = "0.0.0.0",
     fluent_port: int = 25225,
+    schema: str = "devnet",
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     start_index = await start_ledger_sequence(async_rpc_client)
-
-    logger.info("here 2")
 
     # setup fluent client
     fluent_sender = FluentSender(
@@ -71,7 +70,7 @@ async def amain(
     # Flow: Obtain Ledger Details
     #
     flow_ledger_detail_tasks = []
-    partition_size = 10
+    partition_size = 100
     for i in range(partition_size):
         async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
         
@@ -123,17 +122,23 @@ async def amain(
 
     # Flow: Transaction Record
     #
+    schemaToUse = XRPLDevnetSchema.SCHEMA
+    if schema == "testnet":
+        schemaToUse = XRPLTestnetSchema.SCHEMA
+
+    logger.warning("Using schema: ", schemaToUse)
+
     txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
-            validator = GenericValidator(XRPLDevnetSchema.SCHEMA),
-            transformer = XRPLTransactionTransformer(),
+            validator = GenericValidator(schemaToUse),
+            transformer = XRPLTransactionTransformer(schemaToUse),
         )
     ).with_stdout_output_collector(
         tag_name = "transactions",
         is_simplified = True
     ).add_fluent_output_collector(
-        tag_name="devnet",
+        tag_name="ledger_txn",
         fluent_sender=fluent_sender
     ).build()
     # TODO: Enable when fluent is ready
@@ -184,6 +189,13 @@ def parse_arguments() -> argparse.Namespace:
         type = str,
         default = "https://s2.ripple.com:51234",
     )
+    arg_parser.add_argument(
+        "-s",
+        "--schema",
+        help = "specify the schema to use",
+        type = str,
+        default = "devnet",
+    )
 
     return arg_parser.parse_args()
 
@@ -202,6 +214,7 @@ if __name__ == "__main__":
             fluent_tag = args.fluent_tag,
             fluent_host = args.fluent_host,
             fluent_port = args.fluent_port,
+            schema = args.schema,
         ))
 
     print(generate_latest(registry))

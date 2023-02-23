@@ -22,6 +22,7 @@ class FluentCollector(OutputCollector):
     ):
         self.tag_name = tag_name
         self.fluent_sender = fluent_sender
+        logger.warning("tag name in fluent collector: " + self.tag_name)
 
     async def acollect_output(self,
         entry: Dict[str, Any]
@@ -52,7 +53,7 @@ class STDOUTCollector(OutputCollector):
     async def acollect_output(self,
         entry: Dict[str, Any]
     ):
-        if False:
+        if self.is_simplified:
             if type(entry) == dict:
                 print("[STDOUTCollector::%s] Received entry keys: %s" % (
                     self.tag_name,

@@ -1,7 +1,8 @@
 import argparse
+import json
 from collections import namedtuple
 from google.cloud import bigquery
-from xrp import XRPLObjectSchema, XRPLTransactionSchema, XRPLDevnetSchema
+from xrp import XRPLObjectSchema, XRPLTransactionSchema, XRPLDevnetSchema, XRPLTestnetSchema
 from typing import Dict, List, Set
 import datetime
 import logging
@@ -307,7 +308,7 @@ if __name__ == "__main__":
         "-s", "--schema",
         help = "specify the schema type",
         type = str,
-        choices=["", "ledger_object", "transactions", "devnet"],
+        choices=["", "ledger_object", "transactions", "devnet", "testnet"],
         default = "",
     )
     arg_parser.add_argument(
@@ -327,11 +328,15 @@ if __name__ == "__main__":
         "ledger_object": XRPLObjectSchema.SCHEMA,
         "transactions": XRPLTransactionSchema.SCHEMA,
         "devnet": XRPLDevnetSchema.SCHEMA,
+        "testnet": XRPLTestnetSchema.SCHEMA,
     }
 
     schema = schema_dict.get(cli_args.schema)
     if not schema:
         sys.exit("[ERROR] Specify a valid schema. Given '%s'." % cli_args.schema)
+
+    logger.warning("Using schema: ")
+    print_schema(schema)
 
     if cli_args.print:
         print_schema(schema)
