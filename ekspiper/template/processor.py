@@ -36,17 +36,17 @@ class TemplateFlow:
             raise ValueError("message_iterator is not specified")
 
         retry_wrapper = RetryWrapper()
-        should_stop = False
-        ripple_epoch = 946684800
-        epoch_time_end = int(time.time()) - ripple_epoch
-        timeframe = 7776000  # 7776000 90 days  # 86400 5 days?
-        epoch_time_start = epoch_time_end - timeframe
+        # should_stop = False
+        # ripple_epoch = 946684800
+        # epoch_time_end = int(time.time()) - ripple_epoch
+        # timeframe = 7776000  # 7776000 90 days  # 86400 5 days?
+        # epoch_time_start = 1677038441 - ripple_epoch  # epoch_time_end - timeframe
 
         # go through all the messages
         async for message in message_iterator:
-            if should_stop:
-                logger.info("Stopping processor")
-                break
+            # if should_stop:
+            #     logger.info("Stopping processor")
+            #     break
 
             # for all the process, collectors pair
             for pc in self.process_collectors_maps:
@@ -66,11 +66,11 @@ class TemplateFlow:
                 for m in output_messages:
                     if type(m) is dict:
                         message_dict = dict(m)
-                        if message_dict.get("ledger") is not None and dict(message_dict.get("ledger")).get("close_time") is not None:
-                            logger.info("start time: " + str(epoch_time_start) + " current ledger time " + str(m.get("ledger").get("close_time")))
-                            if epoch_time_start > m.get("ledger").get("close_time"):
-                                should_stop = True
-                                logger.info("stopping processors since start time " + str(epoch_time_start) + " is greater than ledger time " + str(m.get("ledger").get("close_time")))
+                        # if message_dict.get("ledger") is not None and dict(message_dict.get("ledger")).get("close_time") is not None:
+                        #     logger.warning("start time: " + str(epoch_time_start) + " current ledger time " + str(m.get("ledger").get("close_time")))
+                        #     if epoch_time_start > m.get("ledger").get("close_time"):
+                        #         should_stop = True
+                        #         logger.warning("stopping processors since start time " + str(epoch_time_start) + " is greater than ledger time " + str(m.get("ledger").get("close_time")))
 
                     for c in pc.collectors:
                         await c.acollect_output(m)

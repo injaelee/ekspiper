@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 import asyncio
 import logging
 from ekspiper.connect.data import DataSink
+from google.cloud import bigquery
 
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,25 @@ class OutputCollector:
         entry: Any,
     ):
         return
+
+
+class BigQueryCollector(OutputCollector):
+    def __init__(self, project: str, dataset: str, table: str):
+        self.project = project
+        self.table = table
+        self.dataset = dataset
+
+    async def acollect_output(self,
+                              entry: Dict[str, Any]
+                              ):
+        table_id = self.project + "." + self.dataset + "." + self.table
+
+        errors = bigquery.Client().insert_rows_json(table_id, [entry], row_ids=[None] * len([entry]))
+
+        if not errors:
+            logger.info("New rows have been added.")
+        else:
+            logger.warning("Encountered errors while inserting rows: {}".format(errors))
 
 
 class FluentCollector(OutputCollector):

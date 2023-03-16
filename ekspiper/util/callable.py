@@ -17,7 +17,7 @@ class RetryWrapper(Generic[I, O]):
         func_handler: Callable[[I], Awaitable[O]],
         max_retry_count: int = 5,
         is_mute_stacktrace: bool = False,
-        base_sleep_s: int = 10,
+        base_sleep_s: int = 2,
         sleep_multiplier: float = 1.5,
     ) -> O:
         iteration_count = 0

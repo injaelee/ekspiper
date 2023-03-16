@@ -31,6 +31,10 @@ class CollectorTestCases(unittest.TestCase):
                         {
                             "string-1": "string"
                         }
+                    ],
+                    "list-2": [
+                        [{"currency": "XRP", "Issuer": "abcdefghiklasd", "type": 48}],
+                        [{"currency": "XRP", "Issuer": "abcdefghiklasd", "type": 48, "list-3": [{"att3": "huh?"}]}]
                     ]
                 },
             },
@@ -49,8 +53,16 @@ class CollectorTestCases(unittest.TestCase):
             "dict-2.list-1": {list},
             "dict-2.list-1.string-1": {str},
             "dict-2.string-1": {str},
+            "dict-2.list-2": {list},
+            "dict-2.list-2.list": {dict},
+            "dict-2.list-2.list.currency": {str},
+            "dict-2.list-2.list.Issuer": {str},
+            "dict-2.list-2.list.type": {int},
+            "dict-2.list-2.list.list-3": {list},
+            "dict-2.list-2.list.list-3.att3": {str},
         }
         attribute_type_mapping = type_mapping_collector.get_mapping()
+        print(attribute_type_mapping)
         for key, type_set in answer_dict.items():
             self.assertIsNotNone(attribute_type_mapping.get(key), "No key exists for key '{key}'".format(key = key))
             self.assertEqual(attribute_type_mapping.get(key), type_set, "Not equal for key '{key}'".format(key = key))

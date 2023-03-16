@@ -127,6 +127,7 @@ class ETLTests(unittest.TestCase):
             "metaData.delivered_amount": {str, dict},
         """
         test_dict = {
+            "Paths": [[{'currency': 'USD', 'issuer': 'rK4ghh5jbUvEaV4ytV9h3M6JU5YVDv4E76', 'type': 48}]],
             "Amount": "100",
             "SendMax":  {
                 "currency": "XRP",
@@ -141,6 +142,7 @@ class ETLTests(unittest.TestCase):
                         "ModifiedNode": {
                             "FinalFields": {
                                 "Balance": "100100",
+                                "Paths": [[{'currency': 'USD', 'issuer': 'rK4ghh5jbUvEaV4ytV9h3M6JU5YVDv4E76', 'type': 48}]],
                             },
                             "LedgerEntryType": "Type",
                             "LedgerIndex": "AAAAA",
@@ -174,8 +176,124 @@ class ETLTests(unittest.TestCase):
                     }
                 ]
         }  }
+
+        answer_dict = {
+            "Paths":[
+                {
+                    "list":[
+                        {
+                            "currency":"USD",
+                            "issuer":"rK4ghh5jbUvEaV4ytV9h3M6JU5YVDv4E76",
+                            "type":48
+                        }
+                    ]
+                }
+            ],
+            "Amount":{
+                "currency":"XRP",
+                "issuer":"",
+                "value":"100"
+            },
+            "SendMax":{
+                "currency":"XRP",
+                "issuer":"NoChange",
+                "value":"200"
+            },
+            "TakerGets":{
+                "currency":"XRP",
+                "issuer":"",
+                "value":"300"
+            },
+            "TakerPays":{
+                "currency":"XRP",
+                "issuer":"",
+                "value":"400"
+            },
+            "metaData":{
+                "AffectedNodes":[
+                    {
+                        "ModifiedNode":{
+                            "FinalFields":{
+                                "Balance":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"100100"
+                                },
+                                "Paths":[
+                                    {
+                                        "list":[
+                                            {
+                                                "currency":"USD",
+                                                "issuer":"rK4ghh5jbUvEaV4ytV9h3M6JU5YVDv4E76",
+                                                "type":48
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "LedgerEntryType":"Type",
+                            "LedgerIndex":"AAAAA",
+                            "PreviousFields":{
+                                "Balance":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"100000"
+                                }
+                            },
+                            "PreviousTxnID":"AAAAA",
+                            "PreviousTxnLgrSeq":71698271
+                        }
+                    },
+                    {
+                        "DeletedNode":{
+                            "FinalFields":{
+                                "Balance":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"100100"
+                                }
+                            },
+                            "LedgerEntryType":"Type",
+                            "LedgerIndex":"AAAAA",
+                            "PreviousFields":{
+                                "Balance":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"100000"
+                                }
+                            },
+                            "PreviousTxnID":"AAAAA",
+                            "PreviousTxnLgrSeq":71698271
+                        }
+                    },
+                    {
+                        "CreatedNode":{
+                            "NewFields":{
+                                "Balance":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"400100"
+                                },
+                                "TakerGets":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"400200"
+                                },
+                                "TakerPays":{
+                                    "currency":"XRP",
+                                    "issuer":"",
+                                    "value":"400300"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+
         transformer = XRPLTransactionTransformer()
         transformed_dict = transformer.transform(test_dict)
         print(transformed_dict)
 
         assert transformed_dict is not test_dict
+        self.assertDictEqual(transformed_dict, answer_dict)

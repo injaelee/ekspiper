@@ -17,3 +17,5 @@ sniffio==1.2.0
 typing-extensions==3.10.0.2
 websockets==10.3
 xrpl-py==1.6.0
+aiohttp==3.8.3
+aiofiles==23.1.0

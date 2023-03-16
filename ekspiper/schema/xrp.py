@@ -1,5 +1,10 @@
 class XRPLTransactionSchema:
     SCHEMA = {
+        "Paths.list.currency": {str},
+        "Paths.list.issuer": {str},
+        "Paths.list.type": {int},
+        "metaData.AffectedNodes.DeletedNode.PreviousFields.TicketCount": {int},
+        "metaData.AffectedNodes.ModifiedNode.PreviousFields.Expiration": {int},
         "AMMID": {str},
         "Account": {str},
         "AccountTxnID": {str},
@@ -41,7 +46,7 @@ class XRPLTransactionSchema:
         "Channel": {str},
         "CheckID": {str},
         "ClearFlag": {int},
-        "DeliverMin": {dict},
+        "DeliverMin": {dict,str},
         "DeliverMin.currency": {str},
         "DeliverMin.issuer": {str},
         "DeliverMin.value": {str},
@@ -571,8 +576,6 @@ class XRPLTransactionSchema:
         "metaData.AffectedNodes.CreatedNode.NewFields.LowQualityIn": {int},
         "metaData.AffectedNodes.CreatedNode.NewFields.HighQualityIn": {int},
         "metaData.AffectedNodes.ModifiedNode.FinalFields.DestinationTag": {int},
-        "metaData.AffectedNodes.DeletedNode.PreviousFields.TicketCount": {int},
-        "metaData.AffectedNodes.ModifiedNode.PreviousFields.Expiration": {int},
     }
 
 class XRPLObjectSchema:
@@ -1275,6 +1278,8 @@ class XRPLDevnetSchema:
 
 class XRPLTestnetSchema:
     SCHEMA = {
+        "metaData.AffectedNodes.DeletedNode.PreviousFields.TicketCount": {int},
+        "metaData.AffectedNodes.ModifiedNode.PreviousFields.Expiration": {int},
         "AMMID": {str},
         "Account": {str},
         "AccountTxnID": {str},
@@ -1316,7 +1321,7 @@ class XRPLTestnetSchema:
         "Channel": {str},
         "CheckID": {str},
         "ClearFlag": {int},
-        "DeliverMin": {dict},
+        "DeliverMin": {dict,str},
         "DeliverMin.currency": {str},
         "DeliverMin.issuer": {str},
         "DeliverMin.value": {str},
@@ -1357,6 +1362,10 @@ class XRPLTestnetSchema:
         "OfferSequence": {int},
         "Owner": {str},
         "Paths": {list},
+        "Paths.list": {dict},
+        "Paths.list.currency": {str},
+        "Paths.list.issuer": {str},
+        "Paths.list.type": {int},
         "PublicKey": {str},
         "QualityIn": {int},
         "QualityOut": {int},

@@ -12,7 +12,7 @@ from ekspiper.collector.output import (
     OutputCollector,
     STDOUTCollector,
     QueueCollector,
-    DataSinkCollector,
+    DataSinkCollector, BigQueryCollector,
 )
 from fluent.asyncsender import FluentSender
 
@@ -60,6 +60,11 @@ class ProcessCollectorsMapBuilder:
             tag_name = tag_name,
         ))
         return self
+
+    def add_bigquery_output_collector(self, project: str, dataset: str, table: str) -> ProcessCollectorsMapBuilder:
+        self.output_collectors.append(BigQueryCollector(project=project, dataset=dataset, table=table))
+        return self
+
 
     def with_stdout_output_collector(self,
         tag_name: str = "",

@@ -9,6 +9,7 @@ from ekspiper.builder.flow import (
 )
 from fluent.asyncsender import FluentSender
 from ekspiper.connect.counter import PartitionedCounterDataSource
+from ekspiper.connect.file_data_source import FileDataSource
 from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
@@ -20,7 +21,7 @@ from ekspiper.processor.etl import (
     GenericValidator,
     XRPLTransactionTransformer,
 )
-from ekspiper.schema.xrp import XRPLDevnetSchema, XRPLTestnetSchema
+from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLTestnetSchema
 from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -45,6 +46,100 @@ async def start_ledger_sequence(client) -> int:
     return await get_latest_validated_ledger_sequence(client) - 1
 
 
+async def amain_file(
+        file: str = None,
+        xrpl_endpoint: str = "https://s2.ripple.com:51234",
+        fluent_tag: str = "test",
+        fluent_host: str = "0.0.0.0",
+        fluent_port: int = 25225,
+        schema: str = "devnet",
+):
+    file_data_source = FileDataSource(
+        file = file,
+    )
+
+    file_data_source.start()
+    async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
+    ledger_record_source_sink = QueueSourceSink(
+        name = "ledger_record_source",
+    )
+    pc_map = ProcessCollectorsMapBuilder().with_processor(
+        XRPLFetchLedgerDetailsProcessor(
+            rpc_client = async_rpc_client,
+        )
+    ).add_data_sink_output_collector(
+        data_sink = ledger_record_source_sink,
+        name = "ledger_record_source_sink"
+    ).build()
+
+    flow_payment_detail = TemplateFlowBuilder().add_process_collectors_map(
+        pc_map
+    ).build()
+    flow_ledger_detail_tasks = [asyncio.create_task(flow_payment_detail.aexecute(
+        message_iterator=file_data_source
+    ))]
+    txn_record_source_sink = QueueSourceSink(
+        name = "txn_record_source_sink",
+    )
+
+    # Flow: Break down the ledger into transactions
+    #
+    pc_map = ProcessCollectorsMapBuilder().with_processor(
+        XRPLExtractTransactionsFromLedgerProcessor(
+            is_include_ledger_index = True,
+        )
+    ).add_data_sink_output_collector(
+        data_sink = txn_record_source_sink,
+        name = "txn_record_source_sink"
+    ).build()
+
+    flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+    flow_ledger_to_txns_brk_task = asyncio.create_task(flow_ledger_to_txns_brk.aexecute(
+        message_iterator = ledger_record_source_sink,
+    ))
+
+    # setup fluent client
+    fluent_sender = FluentSender(
+        fluent_tag,
+        host = fluent_host,
+        port = fluent_port,
+    )
+
+    # Flow: Transaction Record
+    #
+    schemaToUse = XRPLTransactionSchema.SCHEMA
+    if schema == "testnet":
+        schemaToUse = XRPLTestnetSchema.SCHEMA
+
+    logger.warning("Using schema: ", schemaToUse)
+
+    txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
+    pc_map = txn_rec_pc_map_builder.with_processor(
+        ETLTemplateProcessor(
+            validator = GenericValidator(schemaToUse),
+            transformer = XRPLTransactionTransformer(schemaToUse),
+        )
+    ).with_stdout_output_collector(
+        tag_name = "transactions",
+        is_simplified = False
+    ).add_bigquery_output_collector(
+        project='ripplex-347905',
+        dataset='testnet_transaction_data',
+        table='xrpl_transactions_testnet'
+    ).add_fluent_output_collector(
+        tag_name="ledger_txn",
+        fluent_sender=fluent_sender
+    ).build()
+    flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+    flow_txn_record_task = asyncio.create_task(flow_txn_record.aexecute(
+        message_iterator = txn_record_source_sink,
+    ))
+
+    await flow_txn_record_task
+
+    listener.stop()
+
+
 async def amain(
     xrpl_endpoint: str = "https://s2.ripple.com:51234",
     fluent_tag: str = "test",
@@ -54,13 +149,6 @@ async def amain(
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     start_index = await start_ledger_sequence(async_rpc_client)
-
-    # setup fluent client
-    fluent_sender = FluentSender(
-        fluent_tag,
-        host = fluent_host,
-        port = fluent_port,
-    )
 
     # build the ledger queue for processing
     ledger_record_source_sink = QueueSourceSink(
@@ -72,8 +160,6 @@ async def amain(
     flow_ledger_detail_tasks = []
     partition_size = 100
     for i in range(partition_size):
-        async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
-        
         # start with the counter
         index_decrementor_data_source = PartitionedCounterDataSource(
             starting_count = start_index,
@@ -96,7 +182,7 @@ async def amain(
         ).build()
 
         flow_ledger_detail_tasks.append(asyncio.create_task(flow_payment_detail.aexecute(
-            message_iterator = index_decrementor_data_source,
+            message_iterator = index_decrementor_data_source
         )))
 
     # build the transaction queue for processing
@@ -120,9 +206,16 @@ async def amain(
         message_iterator = ledger_record_source_sink,
     ))
 
+    # setup fluent client
+    fluent_sender = FluentSender(
+        fluent_tag,
+        host = fluent_host,
+        port = fluent_port,
+    )
+
     # Flow: Transaction Record
     #
-    schemaToUse = XRPLDevnetSchema.SCHEMA
+    schemaToUse = XRPLTransactionSchema.SCHEMA
     if schema == "testnet":
         schemaToUse = XRPLTestnetSchema.SCHEMA
 
@@ -197,6 +290,14 @@ def parse_arguments() -> argparse.Namespace:
         default = "devnet",
     )
 
+    arg_parser.add_argument(
+        "-f",
+        "--file",
+        help = "get ledgers from file",
+        type = str,
+        default = None,
+    )
+
     return arg_parser.parse_args()
 
 
@@ -209,13 +310,23 @@ if __name__ == "__main__":
         job_name = "extract_ledger_txns",
     ):
         logger.warning("running other main")
-        asyncio.run(amain(
-            xrpl_endpoint = args.xrpl_endpoint,
-            fluent_tag = args.fluent_tag,
-            fluent_host = args.fluent_host,
-            fluent_port = args.fluent_port,
-            schema = args.schema,
-        ))
+        if args.file is None:
+            asyncio.run(amain(
+                xrpl_endpoint = args.xrpl_endpoint,
+                fluent_tag = args.fluent_tag,
+                fluent_host = args.fluent_host,
+                fluent_port = args.fluent_port,
+                schema = args.schema,
+            ))
+        else:
+            asyncio.run(amain_file(
+                file = args.file,
+                xrpl_endpoint = args.xrpl_endpoint,
+                fluent_tag = args.fluent_tag,
+                fluent_host = args.fluent_host,
+                fluent_port = args.fluent_port,
+                schema = args.schema,
+            ))
 
     print(generate_latest(registry))
 
