@@ -2,10 +2,10 @@ FROM python:3.9
 
 WORKDIR /pipeline/
 
-COPY requirements.txt /pipeline/requirements.txt
-RUN pip install --no-cache-dir -r /pipeline/requirements.txt
+COPY requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
 
-ADD ekspiper ./pipeline/ekspiper
-COPY server_container.py ./pipeline/
+ADD ekspiper ./ekspiper
+COPY server_container.py ./
 
-CMD ["python", "server_container.py", "--host", "0.0.0.0", "--port", "80"]
+CMD ["python", "server_container.py"]
