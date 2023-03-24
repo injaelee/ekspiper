@@ -21,7 +21,7 @@ services:
       - ./fluent_config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
       # this file is not provided as part of the repository
-      - /home/adavoodi/sa-private-key.json:/fluent-bit/etc/credentials.json
+      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
 
 #    healthcheck:
 #      test: curl -s http://127.0.0.1:2020/api/v1/health
@@ -30,13 +30,15 @@ services:
 #      start_period: 3s
 #      timeout: 10s
 
-  server_container:
-    build: .
-    depends_on:
-      - fluent-bit
-#          condition: service_healthy
-
+#  server_container:
+#    build:
+#      context: .
+#      network: host
+#    depends_on:
+#      - fluent-bit
+##          condition: service_healthy
+#
 #    ports:
-#      - "24226:24226"
-#      - "14225:14225"
-#      - "25226:25226"
+#      - "24224:24224"
+#      - "14224:14224"
+#      - "25225:25225"
