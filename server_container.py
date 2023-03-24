@@ -148,6 +148,7 @@ async def start_template_flows(
        fluent_sender = fluent_sender,
     ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+    logger.warning("done building, running?")
     app["flow_txn_record"] = asyncio.create_task(flow_txn_record.aexecute(
         message_iterator = txn_record_source_sink,
     ))

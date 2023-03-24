@@ -32,6 +32,7 @@ class TemplateFlow:
     async def aexecute(self,
         message_iterator,
     ):
+        logger.warning("exectuting")
         if not message_iterator:
             raise ValueError("message_iterator is not specified")
 
@@ -51,10 +52,12 @@ class TemplateFlow:
             # for all the process, collectors pair
             for pc in self.process_collectors_maps:
 
+                logger.warning("about to call")
                 output_messages = await retry_wrapper.aretry(
                     message,
                     pc.processor.aprocess,
                 )
+                logger.warning("called")
 
                 if type(output_messages) != list:
                     raise ValueError(
