@@ -11,6 +11,7 @@ services:
       # you can connect through 'localhost:24224'
       # port 24224 is the container port
       #
+      - "2020:2020"
       - "24224:24224"
       - "14224:14224"
       - "25225:25225"
@@ -20,20 +21,20 @@ services:
       - ./fluent_config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
       # this file is not provided as part of the repository
-      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
+      - /home/adavoodi/sa-private-key.json:/fluent-bit/etc/credentials.json
 
-    healthcheck:
-      test: curl --fail http://localhost:24224
-      interval: 60s
-      retries: 5
-      start_period: 20s
-      timeout: 10s
+#    healthcheck:
+#      test: curl -s http://127.0.0.1:2020/api/v1/health
+#      interval: 3s
+#      retries: 2
+#      start_period: 3s
+#      timeout: 10s
 
   server_container:
     build: .
     depends_on:
-      fluent-bit:
-          condition: service_healthy
+      - fluent-bit
+#          condition: service_healthy
 
 #    ports:
 #      - "24226:24226"
