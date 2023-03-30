@@ -115,7 +115,9 @@ async def start_template_flows(
     #
     ledger_to_txns_brk_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = ledger_to_txns_brk_pc_map_builder.with_processor(
-        XRPLExtractTransactionsFromLedgerProcessor()
+        XRPLExtractTransactionsFromLedgerProcessor(
+            is_include_ledger_index = True,
+        )
     #).with_stdout_output_collector(tag_name = "ledger_brk", is_simplified = True).build()
     ).add_data_sink_output_collector(
         data_sink = txn_record_source_sink,

@@ -124,12 +124,13 @@ async def amain_file(
         is_simplified = False
     ).add_bigquery_output_collector(
         project='ripplex-347905',
-        dataset='testnet_transaction_data',
-        table='xrpl_transactions_testnet'
-    ).add_fluent_output_collector(
-        tag_name="ledger_txn",
-        fluent_sender=fluent_sender
+        dataset='testnet',
+        table='transactions'
     ).build()
+    # ).add_fluent_output_collector(
+    #     tag_name="ledger_txn",
+    #     fluent_sender=fluent_sender
+    # ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     flow_txn_record_task = asyncio.create_task(flow_txn_record.aexecute(
         message_iterator = txn_record_source_sink,

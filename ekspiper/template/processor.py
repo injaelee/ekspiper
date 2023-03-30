@@ -32,7 +32,6 @@ class TemplateFlow:
     async def aexecute(self,
         message_iterator,
     ):
-        logger.warning("exectuting")
         if not message_iterator:
             raise ValueError("message_iterator is not specified")
 
@@ -52,12 +51,10 @@ class TemplateFlow:
             # for all the process, collectors pair
             for pc in self.process_collectors_maps:
 
-                logger.warning("about to call")
                 output_messages = await retry_wrapper.aretry(
                     message,
                     pc.processor.aprocess,
                 )
-                logger.warning("called")
 
                 if type(output_messages) != list:
                     raise ValueError(
@@ -67,8 +64,8 @@ class TemplateFlow:
                 # run through the collectors for the corresponding
                 # Collectors
                 for m in output_messages:
-                    if type(m) is dict:
-                        message_dict = dict(m)
+                    # if type(m) is dict:
+                        #  message_dict = dict(m)
                         # if message_dict.get("ledger") is not None and dict(message_dict.get("ledger")).get("close_time") is not None:
                         #     logger.warning("start time: " + str(epoch_time_start) + " current ledger time " + str(m.get("ledger").get("close_time")))
                         #     if epoch_time_start > m.get("ledger").get("close_time"):
@@ -80,8 +77,8 @@ class TemplateFlow:
 
                 # if there is an output collector
                 # collect the output as a whole
-                if self.output_collector:
-                    await self.output_collector.acollect(
-                        input = message,
-                        output = output_messages,
-                    )
+                # if self.output_collector:
+                #     await self.output_collector.acollect(
+                #         input = message,
+                #         output = output_messages,
+                #     )

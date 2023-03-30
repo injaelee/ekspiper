@@ -1,4 +1,3 @@
-from ekspiper.processor.base import RetryWrapper
 from ekspiper.processor.fetch_transactions import XRPLFetchLedgerDetailsProcessor
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 import unittest
@@ -12,8 +11,8 @@ class FetchTest(unittest.IsolatedAsyncioTestCase):
         )
         output = await processor.aprocess(entry = 72959850)
         
-        txns = output.get("ledger").get("transactions")
-        ledger_index = output.get("ledger_index")
+        txns = output[0].get("ledger").get("transactions")
+        ledger_index = output[0].get("ledger_index")
 
         #import json; print(json.dumps(output, indent = "  "))
 

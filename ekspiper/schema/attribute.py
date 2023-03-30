@@ -107,7 +107,7 @@ class AttributeTypeMappingCollector:
                         if not attribute_mapping.get(attribute_name + ".list"):
                             attribute_mapping[attribute_name + ".list"] = set()
 
-                        data_type = self._data_type_translation(dict)
+                        data_type = self._data_type_translation(list)
                         attribute_mapping[attribute_name + ".list"].add(data_type)
 
                         for e in entry:

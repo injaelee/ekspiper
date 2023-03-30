@@ -54,7 +54,7 @@ class CollectorTestCases(unittest.TestCase):
             "dict-2.list-1.string-1": {str},
             "dict-2.string-1": {str},
             "dict-2.list-2": {list},
-            "dict-2.list-2.list": {dict},
+            "dict-2.list-2.list": {list},
             "dict-2.list-2.list.currency": {str},
             "dict-2.list-2.list.Issuer": {str},
             "dict-2.list-2.list.type": {int},

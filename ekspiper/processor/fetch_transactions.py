@@ -72,7 +72,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
 class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
     def __init__(self,
-        is_include_ledger_index = False,
+        is_include_ledger_index = True,
     ):
         self.is_include_ledger_index = is_include_ledger_index
 
