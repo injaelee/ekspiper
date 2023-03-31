@@ -56,6 +56,11 @@ async def stop_template_flows(
     await app["flow_txn_record"]
     await app["flow_ledger_to_txns_brk"]
 
+async def websocket_supervisor(ledger_creation_source):
+    while True:
+        logger.warning("Attempting to connect to server...")
+        await ledger_creation_source._start()
+
 
 async def start_template_flows(
     app: web_app.Application,
@@ -76,8 +81,13 @@ async def start_template_flows(
     ledger_creation_source = LedgerCreationDataSource(
         wss_url = "wss://s1.ripple.com",
     )
-    ledger_creation_source.start()
+
+    app["ledger_creation_source_task"] = asyncio.create_task(websocket_supervisor(ledger_creation_source))
+    # ledger_creation_source.start()
     app["ledger_creation_source"] = ledger_creation_source
+
+
+    # ----
 
     ledger_record_source_sink = QueueSourceSink(
         name = "ledger_record_source_sink",

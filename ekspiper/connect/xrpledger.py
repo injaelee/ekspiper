@@ -1,4 +1,7 @@
 import asyncio
+
+from websockets.exceptions import ConnectionClosedError
+
 from ekspiper.util.callable import RetryWrapper
 from xrpl.asyncio.clients import (
     AsyncWebsocketClient,
@@ -33,19 +36,25 @@ class LedgerCreationDataSource(DataSource):
 
     async def _start(self):
         ledger_update_sub_req = Subscribe(
-            streams = [self.stream_type])
+            streams = [self.stream_type]
+        )
+
         async with AsyncWebsocketClient(self.wss_url) as client:
             # one time subscription
             await client.send(ledger_update_sub_req)
 
-            async for message in client:
-                # TODO: Figure out the ERROR control flow to retry openning conn
-                logger.info("[LedgerCreationDataSource] received message")
-                await self.async_queue.put(message)
+            try:
+                async for message in client:
+                    logger.info("[LedgerCreationDataSource] received message")
+                    self.async_queue.put_nowait(message)
+            except ConnectionClosedError:
+                logger.error("Connection closed - connection closed error")
+
+        logger.warning("Connection closed - server kicked us off")
 
     def stop(self):
-        self.is_stop = True
-        self.populate_task.cancel()
+            self.is_stop = True
+            self.populate_task.cancel()
 
     def __aiter__(self):
         return self
@@ -90,7 +99,6 @@ class LedgerObjectDataSource(DataSource):
         self.execution_id = str(bson.ObjectId())
 
         self.done_callback = done_callback
-
 
     def start(self):
         self.populate_task = asyncio.create_task(self._start())
