@@ -1,19 +1,19 @@
 import asyncio
-
-from websockets.exceptions import ConnectionClosedError
+import sys
+import traceback
 
 from ekspiper.util.callable import RetryWrapper
 from xrpl.asyncio.clients import (
     AsyncWebsocketClient,
     AsyncJsonRpcClient,
 )
-from xrpl.models import Subscribe, Unsubscribe, StreamParameter
+from xrpl.models import Subscribe, StreamParameter
 from xrpl.models.requests.ledger_data import LedgerData
 from typing import Callable, Union
 import logging
 import bson
 from .data import DataSource
-
+from ..util.async_iterable_with_timeout import AsyncTimedIterable
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class LedgerCreationDataSource(DataSource):
         self.async_queue = asyncio.Queue()
         self.is_stop = False
         self.populate_task = None
+        self.client = None
         self.done_callback = done_callback
         self.stream_type = stream_type
 
@@ -35,25 +36,32 @@ class LedgerCreationDataSource(DataSource):
         self.populate_task = asyncio.create_task(self._start())
 
     async def _start(self):
-        ledger_update_sub_req = Subscribe(
-            streams = [self.stream_type]
-        )
+        ledger_update_sub_req = Subscribe(streams=[self.stream_type])
 
+        # while True:
         async with AsyncWebsocketClient(self.wss_url) as client:
+            self.client = client
             # one time subscription
+            logger.info("[LedgerCreationDataSource] Sending subscribe request")
             await client.send(ledger_update_sub_req)
 
             try:
-                async for message in client:
-                    logger.info("[LedgerCreationDataSource] received message")
+                timed_message_iterator = AsyncTimedIterable(client, 15)
+                async for message in timed_message_iterator:
                     self.async_queue.put_nowait(message)
-            except ConnectionClosedError:
-                logger.error("Connection closed - connection closed error")
+            except asyncio.TimeoutError as e:
+                logger.error("[LedgerCreationDataSource] Haven't received a message in 15s, closing connection : " + str(e))
+                await client.close()
+            except Exception as e:
+                logger.error("[LedgerCreationDataSource] Uncaught exception type: " + str(e))
 
-        logger.warning("Connection closed - server kicked us off")
+        logger.warning("[LedgerCreationDataSource] Connection closed - server kicked us off")
 
     def stop(self):
-            self.is_stop = True
+        self.is_stop = True
+        self.client.close()
+
+        if self.populate_task:
             self.populate_task.cancel()
 
     def __aiter__(self):

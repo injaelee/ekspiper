@@ -75,12 +75,12 @@ class STDOUTCollector(OutputCollector):
     ):
         if self.is_simplified:
             if type(entry) == dict:
-                print("[STDOUTCollector::%s] Received entry keys: %s" % (
+                logger.info("[STDOUTCollector::%s] Received entry keys: %s" % (
                     self.tag_name,
                     entry.keys(),
                 ))
         else:
-            print("[STDOUTCollector::%s] %s" % (
+            logger.info("[STDOUTCollector::%s] %s" % (
                 self.tag_name,
                 entry,
             ))

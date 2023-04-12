@@ -14,14 +14,13 @@ from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
     XRPLExtractTransactionsFromLedgerProcessor,
-    PaymentTransactionSummaryProcessor,
 )
 from ekspiper.processor.etl import (
     ETLTemplateProcessor,
     GenericValidator,
     XRPLTransactionTransformer,
 )
-from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLTestnetSchema
+from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLObjectSchema
 from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -52,7 +51,7 @@ async def amain_file(
         fluent_tag: str = "test",
         fluent_host: str = "0.0.0.0",
         fluent_port: int = 25225,
-        schema: str = "devnet",
+        schema: str = "transaction",
 ):
     file_data_source = FileDataSource(
         file = file,
@@ -107,17 +106,17 @@ async def amain_file(
 
     # Flow: Transaction Record
     #
-    schemaToUse = XRPLTransactionSchema.SCHEMA
-    if schema == "testnet":
-        schemaToUse = XRPLTestnetSchema.SCHEMA
+    schema_to_use = XRPLTransactionSchema.SCHEMA
+    if schema == "object":
+        schema_to_use = XRPLObjectSchema.SCHEMA
 
-    logger.warning("Using schema: ", schemaToUse)
+    logger.warning("Using schema: ", schema)
 
     txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
-            validator = GenericValidator(schemaToUse),
-            transformer = XRPLTransactionTransformer(schemaToUse),
+            validator = GenericValidator(schema_to_use),
+            transformer = XRPLTransactionTransformer(schema_to_use),
         )
     ).with_stdout_output_collector(
         tag_name = "transactions",
@@ -146,7 +145,7 @@ async def amain(
     fluent_tag: str = "test",
     fluent_host: str = "0.0.0.0",
     fluent_port: int = 25225,
-    schema: str = "devnet",
+    schema: str = "transaction",
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     start_index = await start_ledger_sequence(async_rpc_client)
@@ -216,17 +215,17 @@ async def amain(
 
     # Flow: Transaction Record
     #
-    schemaToUse = XRPLTransactionSchema.SCHEMA
-    if schema == "testnet":
-        schemaToUse = XRPLTestnetSchema.SCHEMA
+    schema_to_use = XRPLTransactionSchema.SCHEMA
+    if schema == "object":
+        schema_to_use = XRPLObjectSchema.SCHEMA
 
-    logger.warning("Using schema: ", schemaToUse)
+    logger.warning("Using schema: ", schema)
 
     txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
-            validator = GenericValidator(schemaToUse),
-            transformer = XRPLTransactionTransformer(schemaToUse),
+            validator = GenericValidator(schema_to_use),
+            transformer = XRPLTransactionTransformer(schema_to_use),
         )
     ).with_stdout_output_collector(
         tag_name = "transactions",
@@ -288,7 +287,7 @@ def parse_arguments() -> argparse.Namespace:
         "--schema",
         help = "specify the schema to use",
         type = str,
-        default = "devnet",
+        default = "transaction",
     )
 
     arg_parser.add_argument(

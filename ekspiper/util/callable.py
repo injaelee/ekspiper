@@ -42,6 +42,6 @@ class RetryWrapper(Generic[I, O]):
                 continue
 
         if not is_value_set:
-            raise RuntimeError("failed even after %d retries." % max_retry_count)
+            raise RuntimeError("[Callable] - Failed even after %d retries." % max_retry_count)
 
         return out

@@ -43,8 +43,8 @@ rsa==4.9
 six==1.16.0
 sniffio==1.2.0
 soupsieve==2.3.2.post1
-typing-extensions==3.10.0.2
+typing-extensions==4.5.0
 urllib3==1.26.14
 websockets==10.3
-xrpl-py==1.6.0
+xrpl-py==1.7.0
 yarl==1.8.2

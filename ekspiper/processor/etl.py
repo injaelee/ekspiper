@@ -225,7 +225,7 @@ class XRPLTransactionTransformer(Transformer):
                 break
 
         if p in val and type(val[p]) is not dict:
-            logger.warning("transforming path: " + str(path))
+            logger.info("transforming path: " + str(path))
             val[p] = {
                 "currency": "XRP",
                 "issuer": "",

@@ -59,7 +59,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
         # check the response success
         if not response.is_successful():
-            raise ValueError("Fetching transactions for ledger '%d'" % ledger_index)
+            raise ValueError("Error fetching transactions for ledger '%d'" % ledger_index)
 
         message = response.result
         """

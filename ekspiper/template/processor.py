@@ -5,9 +5,7 @@ import logging
 from ekspiper.collector.output import OutputCollector
 from ekspiper.util.callable import RetryWrapper
 
-
 logger = logging.getLogger(__name__)
-
 
 ProcessCollectorsMap = collections.namedtuple(
     "ProcessCollectorsMap", [
@@ -23,15 +21,19 @@ class TemplateFlow:
     """
 
     def __init__(self,
-        process_collectors_maps: List[ProcessCollectorsMap],
-        output_collector: OutputCollector = None,
-    ):
+                 process_collectors_maps: List[ProcessCollectorsMap],
+                 output_collector: OutputCollector = None,
+                 ):
         self.output_collector = output_collector
         self.process_collectors_maps = process_collectors_maps
 
-    async def aexecute(self,
-        message_iterator,
-    ):
+    async def aexecute(self, message_iterator):
+        try:
+            await self._aexecute(message_iterator)
+        except Exception as e:
+            logger.error("[Template Flow] - Uncaught Error while executing processors: " + str(e))
+
+    async def _aexecute(self, message_iterator):
         if not message_iterator:
             raise ValueError("message_iterator is not specified")
 

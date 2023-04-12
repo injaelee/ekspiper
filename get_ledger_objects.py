@@ -29,17 +29,18 @@ from prometheus_client import (
 logger = logging.getLogger(__name__)
 logging.basicConfig(level = logging.INFO)
 
-"""
-# TODO's
-- [ ] Optionally specify specific ledger index
 
-"""
 async def amain(
     xrpl_endpoint: str = "https://s2.ripple.com:51234",
     fluent_tag: str = "test",
     fluent_host: str = "0.0.0.0",
     fluent_port: int = 25225,
 ):
+    """
+    # TODO's
+    - [ ] Optionally specify specific ledger index
+
+    """
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     ledger_index = await get_latest_validated_ledger_sequence(async_rpc_client) - 1
 
