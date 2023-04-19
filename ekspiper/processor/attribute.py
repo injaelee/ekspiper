@@ -15,7 +15,9 @@ class AttributeCollectionProcessor(EntryProcessor):
         )
         self.latest_key_count = len(
             self.attribute_type_mapping_collector.get_keys())
-    
+
+    # TODO: this only accounts for changes to the keys, not values. can be problematic when we have multiple datatypes
+    #  for a single key, we wont register the change
     async def aprocess(self,
         entry: Dict[str, Any],
     ) -> List[Dict[str, Any]]:

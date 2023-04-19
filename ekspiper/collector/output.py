@@ -7,6 +7,7 @@ from google.cloud import bigquery
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class OutputCollector:
@@ -75,12 +76,12 @@ class STDOUTCollector(OutputCollector):
     ):
         if self.is_simplified:
             if type(entry) == dict:
-                logger.info("[STDOUTCollector::%s] Received entry keys: %s" % (
+                print("[STDOUTCollector::%s] Received entry keys: %s" % (
                     self.tag_name,
                     entry.keys(),
                 ))
         else:
-            logger.info("[STDOUTCollector::%s] %s" % (
+            print("[STDOUTCollector::%s] %s" % (
                 self.tag_name,
                 entry,
             ))

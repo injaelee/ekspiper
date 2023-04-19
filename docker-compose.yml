@@ -21,7 +21,7 @@ services:
       - ./fluent_config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
       # this file is not provided as part of the repository
-      - /home/adavoodi/sa-private-key.json:/fluent-bit/etc/credentials.json
+      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
 
 #    healthcheck:
 #      test: curl -s http://127.0.0.1:2020/api/v1/health

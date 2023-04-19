@@ -139,7 +139,7 @@ class XRPLObjectTransformer(Transformer):
         return working_data_entry
 
 
-class XRPLTransactionTransformer(Transformer):
+class XRPLGenericTransformer(Transformer):
     def __init__(self, schema=XRPLTransactionSchema.SCHEMA):
         self.toTransform = set()
 

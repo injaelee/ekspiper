@@ -1,3 +1,4 @@
+import copy
 from typing import Any, Dict, Generic, List, TypeVar, Union
 from ekspiper.processor.base import EntryProcessor
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -92,6 +93,16 @@ class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
 
         return transactions
 
+
+class XRPLLedgerProcessor(EntryProcessor):
+    async def aprocess(self,
+                       entry: Dict[str, Any], # ledger response object
+                       ) -> List[Dict[str, Any]]:
+        ledger = copy.deepcopy(entry)
+        ledger["transaction_count"] = len(entry.get("ledger").get("transactions"))
+        del ledger["ledger"]["transactions"]
+
+        return [ledger]
 
 class PaymentTransactionSummaryProcessor(EntryProcessor):
     #def process(self,

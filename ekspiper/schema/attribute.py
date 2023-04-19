@@ -94,7 +94,6 @@ class AttributeTypeMappingCollector:
                     attribute_mapping = attribute_mapping,
                 )
 
-            # assumption: there is no list of lists
             if type(v) == list:
                 for entry in v:
                     if type(entry) == dict:

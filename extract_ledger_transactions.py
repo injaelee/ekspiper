@@ -18,7 +18,7 @@ from ekspiper.processor.fetch_transactions import (
 from ekspiper.processor.etl import (
     ETLTemplateProcessor,
     GenericValidator,
-    XRPLTransactionTransformer,
+    XRPLGenericTransformer,
 )
 from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLObjectSchema
 from ekspiper.metric.prom import ScriptExecutionMetrics
@@ -116,7 +116,7 @@ async def amain_file(
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
             validator = GenericValidator(schema_to_use),
-            transformer = XRPLTransactionTransformer(schema_to_use),
+            transformer = XRPLGenericTransformer(schema_to_use),
         )
     ).with_stdout_output_collector(
         tag_name = "transactions",
@@ -225,7 +225,7 @@ async def amain(
     pc_map = txn_rec_pc_map_builder.with_processor(
         ETLTemplateProcessor(
             validator = GenericValidator(schema_to_use),
-            transformer = XRPLTransactionTransformer(schema_to_use),
+            transformer = XRPLGenericTransformer(schema_to_use),
         )
     ).with_stdout_output_collector(
         tag_name = "transactions",

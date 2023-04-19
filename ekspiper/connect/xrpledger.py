@@ -32,13 +32,9 @@ class LedgerCreationDataSource(DataSource):
         self.done_callback = done_callback
         self.stream_type = stream_type
 
-    def start(self):
-        self.populate_task = asyncio.create_task(self._start())
-
     async def _start(self):
         ledger_update_sub_req = Subscribe(streams=[self.stream_type])
 
-        # while True:
         async with AsyncWebsocketClient(self.wss_url) as client:
             self.client = client
             # one time subscription

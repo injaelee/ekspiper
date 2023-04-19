@@ -582,6 +582,33 @@ class XRPLTransactionSchema:
     }
 
 
+class XRPLLedgerSchema:
+    SCHEMA = {
+        "ledger": {dict},
+        "ledger.accepted": {bool},
+        "ledger.account_hash": {str},
+        "ledger.close_flags": {int},
+        "ledger.close_time": {int},
+        "ledger.close_time_human": {str},
+        "ledger.close_time_resolution": {int},
+        "ledger.closed": {bool},
+        "ledger.hash": {str},
+        "ledger.ledger_hash": {str},
+        "ledger.ledger_index": {str},
+        "ledger.parent_close_time": {int},
+        "ledger.parent_hash": {str},
+        "ledger.seqNum": {str},
+        "ledger.totalCoins": {str},
+        "ledger.total_coins": {str},
+        "ledger.transaction_hash": {str},
+        "ledger_hash": {str},
+        "ledger_index": {int},
+        "transaction_count": {int},
+        "validated": {bool},
+        "warning": {str},
+    }
+
+
 class XRPLObjectSchema:
     SCHEMA = {
         "AMMAccount": {str},
@@ -711,10 +738,4 @@ class XRPLObjectSchema:
         "_LedgerIndex": {int},
         "_Sequence": {int},
         "index": {str},
-    }
-
-
-class XRPLLedgerSchema:
-    SCHEMA = {
-
     }

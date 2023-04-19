@@ -11,19 +11,15 @@ from xrpl.asyncio.clients import AsyncJsonRpcClient
 from fluent.asyncsender import FluentSender
 from ekspiper.connect.xrpledger import LedgerCreationDataSource
 from ekspiper.connect.queue import QueueSourceSink
-from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLObjectSchema
+from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLObjectSchema, XRPLLedgerSchema
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
-    XRPLExtractTransactionsFromLedgerProcessor,
-)
-from ekspiper.processor.fetch_book_offers import (
-    XRPLFetchBookOffersProcessor, 
-    BuildBookOfferRequestsProcessor,
+    XRPLExtractTransactionsFromLedgerProcessor, XRPLLedgerProcessor,
 )
 from ekspiper.processor.etl import (
     ETLTemplateProcessor,
     GenericValidator,
-    XRPLTransactionTransformer,
+    XRPLGenericTransformer,
 )
 import logging
 
@@ -57,6 +53,7 @@ async def stop_template_flows(
     # for r in app["flow_booker_offer_records"]:
     #     await r
     await app["flow_txn_record"]
+    await app["flow_ledger_record"]
     await app["flow_ledger_to_txns_brk"]
 
 
@@ -74,36 +71,21 @@ async def websocket_supervisor(ledger_creation_source):
 async def start_template_flows(
     app: web_app.Application,
     xrpl_endpoint: str = "https://s2.ripple.com:51234/",
-    fluent_tag: str = "mainnet.transactions",
+    fluent_tag: str = None,
     fluent_host: str = "0.0.0.0",
     fluent_port: int = 25225,
     schema: str = "transactions",
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
-    fluent_sender = FluentSender(
-        fluent_tag,
-        host = fluent_host,
-        port = fluent_port,
-    )
-
-    # build the ledger creation up-to-date data source
-    ledger_creation_source = LedgerCreationDataSource(
-        wss_url = "wss://s1.ripple.com",
-    )
-
+    fluent_sender = FluentSender(fluent_tag + ".transactions", host = fluent_host, port = fluent_port)
+    ledger_creation_source = LedgerCreationDataSource(wss_url = "wss://s1.ripple.com")
+    ledger_record_source_sink = QueueSourceSink(name = "ledger_record_source_sink")
+    txn_record_source_sink = QueueSourceSink(name = "txn_record_source_sink")
+    formatted_ledger_source_sink = QueueSourceSink(name = "ledger_source_sink")
     app["ledger_creation_source_task"] = asyncio.create_task(websocket_supervisor(ledger_creation_source))
     app["ledger_creation_source"] = ledger_creation_source
-
-    ledger_record_source_sink = QueueSourceSink(
-        name = "ledger_record_source_sink",
-    )
     app["ledger_record_source_sink"] = ledger_record_source_sink
-
-    txn_record_source_sink = QueueSourceSink(
-        name = "txn_record_source_sink",
-    )
     app["txn_record_source_sink"] = txn_record_source_sink
-
     app["flow_ledger_details"] = []
 
     # create 10 tasks of the same to increase throughput
@@ -113,7 +95,6 @@ async def start_template_flows(
             XRPLFetchLedgerDetailsProcessor(
                 rpc_client = async_rpc_client,
             )
-            #).with_stdout_output_collector().build()
         ).add_data_sink_output_collector(
             data_sink = ledger_record_source_sink,
             name = "ledger_record_source_sink",
@@ -122,25 +103,25 @@ async def start_template_flows(
         app["flow_ledger_details"].append(asyncio.create_task(flow_ledger_details.aexecute(
             message_iterator = ledger_creation_source,
         )))
-        # app["flow_ledger_details"] = asyncio.create_task(flow_ledger_details.aexecute(
-        #     message_iterator = ledger_creation_source,
-        # ))
-
     
     # Flow: Ledger to Transactions Break Flow
-    #
-    ledger_to_txns_brk_pc_map_builder = ProcessCollectorsMapBuilder()
-    pc_map = ledger_to_txns_brk_pc_map_builder.with_processor(
+    pc_map = ProcessCollectorsMapBuilder().with_processor(
         XRPLExtractTransactionsFromLedgerProcessor(
             is_include_ledger_index = True,
         )
-    #).with_stdout_output_collector(tag_name = "ledger_brk", is_simplified = True).build()
     ).add_data_sink_output_collector(
         data_sink = txn_record_source_sink,
         name = "txn_record_source_sink",
     ).build()
 
-    flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+    ledger_record_pc_map = ProcessCollectorsMapBuilder().with_processor(
+        XRPLLedgerProcessor()
+    ).add_data_sink_output_collector(
+        data_sink = formatted_ledger_source_sink,
+        name = "txn_record_source_sink",
+    ).build()
+
+    flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).add_process_collectors_map(ledger_record_pc_map).build()
     app["flow_ledger_to_txns_brk"] = asyncio.create_task(flow_ledger_to_txns_brk.aexecute(
         message_iterator = ledger_record_source_sink,
     ))
@@ -152,23 +133,39 @@ async def start_template_flows(
     logger.warning("Using schema: " + schema)
 
     # Flow: Transaction Record
-    txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
-    pc_map = txn_rec_pc_map_builder.with_processor(
+    pc_map = ProcessCollectorsMapBuilder().with_processor(
         ETLTemplateProcessor(
             validator = GenericValidator(schema_to_use),
-            transformer = XRPLTransactionTransformer(schema_to_use),
+            transformer = XRPLGenericTransformer(schema_to_use),
         )
     ).with_stdout_output_collector(
-        tag_name = "transactions",
+        tag_name = fluent_tag,
         is_simplified = True
     ).add_fluent_output_collector(
-       tag_name = "",
+       tag_name = fluent_tag,
        fluent_sender = fluent_sender,
     ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
-    logger.warning("done building, running?")
     app["flow_txn_record"] = asyncio.create_task(flow_txn_record.aexecute(
         message_iterator = txn_record_source_sink,
+    ))
+
+    pc_map_ledgers = ProcessCollectorsMapBuilder().with_processor(
+        ETLTemplateProcessor(
+            validator = GenericValidator(XRPLLedgerSchema.SCHEMA),
+            transformer = XRPLGenericTransformer(XRPLLedgerSchema.SCHEMA),
+        )
+    ).with_stdout_output_collector(
+        tag_name = fluent_tag,
+        is_simplified = True
+    ).add_fluent_output_collector(
+        tag_name = fluent_tag,
+        fluent_sender = FluentSender(fluent_tag + ".ledgers", host = fluent_host, port = fluent_port),
+    ).build()
+    flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
+    logger.warning("done building, running?")
+    app["flow_ledger_record"] = asyncio.create_task(flow_ledger_record.aexecute(
+        message_iterator = formatted_ledger_source_sink,
     ))
 
 

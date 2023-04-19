@@ -1,6 +1,6 @@
 from ekspiper.schema.xrp import XRPLObjectSchema
 from ekspiper.processor.etl import (
-    XRPLTransactionTransformer, 
+    XRPLGenericTransformer,
     GenericValidator,
     XRPLObjectTransformer,
 )
@@ -291,7 +291,7 @@ class ETLTests(unittest.TestCase):
             }
         }
 
-        transformer = XRPLTransactionTransformer()
+        transformer = XRPLGenericTransformer()
         transformed_dict = transformer.transform(test_dict)
         print(transformed_dict)
 

@@ -6,7 +6,7 @@ from xrpl.asyncio.clients import AsyncJsonRpcClient
 
 from ekspiper.builder.flow import ProcessCollectorsMapBuilder, TemplateFlowBuilder
 from ekspiper.connect.queue import QueueSourceSink
-from ekspiper.processor.etl import ETLTemplateProcessor, GenericValidator, XRPLTransactionTransformer
+from ekspiper.processor.etl import ETLTemplateProcessor, GenericValidator, XRPLGenericTransformer
 from ekspiper.processor.fetch_book_offers import BuildBookOfferRequestsProcessor
 from xrpl.models.requests.book_offers import BookOffers
 from xrpl.models.currencies import XRP, IssuedCurrency
@@ -177,7 +177,7 @@ class LedgerToTransactionTest(unittest.IsolatedAsyncioTestCase):
         pc_map = txn_rec_pc_map_builder.with_processor(
             ETLTemplateProcessor(
                 validator = GenericValidator(schemaToUse),
-                transformer = XRPLTransactionTransformer(schemaToUse),
+                transformer = XRPLGenericTransformer(schemaToUse),
             )
         ).add_data_sink_output_collector(transaction_sink).build()
 
