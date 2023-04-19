@@ -589,6 +589,7 @@ class XRPLLedgerSchema:
         "ledger.account_hash": {str},
         "ledger.close_flags": {int},
         "ledger.close_time": {int},
+        "ledger.close_time_estimated": {bool},
         "ledger.close_time_human": {str},
         "ledger.close_time_resolution": {int},
         "ledger.closed": {bool},
@@ -606,6 +607,9 @@ class XRPLLedgerSchema:
         "transaction_count": {int},
         "validated": {bool},
         "warning": {str},
+        "warnings": {list},
+        "warnings.id": {int},
+        "warnings.message": {str},
     }
 
 
