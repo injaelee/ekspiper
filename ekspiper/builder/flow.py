@@ -3,7 +3,7 @@ import asyncio
 import logging
 
 from ekspiper.template.processor import (
-    ProcessCollectorsMap, 
+    ProcessCollectorsMap,
     TemplateFlow,
 )
 from ekspiper.processor.base import EntryProcessor
@@ -51,8 +51,8 @@ class ProcessCollectorsMapBuilder:
         return self
 
     def add_fluent_output_collector(self,
-        tag_name: str,
         fluent_sender: FluentSender,
+        tag_name: str = "",
     ) -> ProcessCollectorsMapBuilder:
         logging.warning("adding fluent collector")
         self.output_collectors.append(FluentCollector(

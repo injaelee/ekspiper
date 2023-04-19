@@ -126,23 +126,16 @@ async def start_template_flows(
         message_iterator = ledger_record_source_sink,
     ))
 
-    schema_to_use = XRPLTransactionSchema.SCHEMA
-    if schema == "ledger_object":
-        schema_to_use = XRPLObjectSchema.SCHEMA
-
-    logger.warning("Using schema: " + schema)
-
     # Flow: Transaction Record
     pc_map = ProcessCollectorsMapBuilder().with_processor(
         ETLTemplateProcessor(
-            validator = GenericValidator(schema_to_use),
-            transformer = XRPLGenericTransformer(schema_to_use),
+            validator = GenericValidator(XRPLTransactionSchema.SCHEMA),
+            transformer = XRPLGenericTransformer(XRPLTransactionSchema.SCHEMA),
         )
     ).with_stdout_output_collector(
         tag_name = fluent_tag,
         is_simplified = True
     ).add_fluent_output_collector(
-       tag_name = fluent_tag,
        fluent_sender = fluent_sender,
     ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
@@ -159,7 +152,6 @@ async def start_template_flows(
         tag_name = fluent_tag,
         is_simplified = True
     ).add_fluent_output_collector(
-        tag_name = fluent_tag,
         fluent_sender = FluentSender(fluent_tag + ".ledgers", host = fluent_host, port = fluent_port),
     ).build()
     flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
@@ -199,13 +191,6 @@ def parse_arguments() -> argparse.Namespace:
         help = "specify the rippled RESTful API endpoint",
         type = str,
         default = "https://s2.ripple.com:51234",
-    )
-    arg_parser.add_argument(
-        "-s",
-        "--schema",
-        help = "specify the schema to use",
-        type = str,
-        default = "transactions",
     )
     arg_parser.add_argument(
         "-d",
