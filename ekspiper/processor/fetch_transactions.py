@@ -1,10 +1,13 @@
 import copy
 from typing import Any, Dict, Generic, List, TypeVar, Union
+
+from xrpl.models import Ledger
+
 from ekspiper.processor.base import EntryProcessor
 from xrpl.asyncio.clients import AsyncJsonRpcClient
-from xrpl.models.requests.ledger import Ledger
 import logging
 
+# from ekspiper.util.xrplpy_patches import Ledger
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
         """
         if type(entry) not in [int, dict]:
             raise ValueError(
-                "[FetchXRPLTransactionsProcessor] Expected 'int' but got '%s': %s" % (
+                "[XRPLFetchLedgerDetailsProcessor] Expected 'int' but got '%s': %s" % (
                 type(entry),
                 entry,
             ))
@@ -41,12 +44,12 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
         
         if not ledger_index:
             raise ValueError(
-                "[FetchXRPLTransactionsProcessor] missing ledger index: %s" % (
+                "[XRPLFetchLedgerDetailsProcessor] missing ledger index: %s" % (
                 entry,  
             ))            
 
         logger.info(
-            "[FetchXRPLTransactionsProcessor] Fetching transactions for ledger '%d'",
+            "[XRPLFetchLedgerDetailsProcessor] Fetching transactions for ledger '%d'",
             ledger_index,
         )
 
@@ -60,6 +63,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
         # check the response success
         if not response.is_successful():
+            logger.error("[XRPLFetchLedgerDetailsProcessor] failed to fetch request, error: ", str(response))
             raise ValueError("Error fetching transactions for ledger '%d'" % ledger_index)
 
         message = response.result

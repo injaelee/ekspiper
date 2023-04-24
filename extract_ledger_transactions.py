@@ -3,8 +3,6 @@ import asyncio
 import queue
 from logging.handlers import QueueHandler, QueueListener
 
-from xrpl.models import Ledger
-
 from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
@@ -31,8 +29,11 @@ from prometheus_client import (
     generate_latest,
 )
 
-from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence
+from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence, Ledger
+import xrpl.models
 
+# TODO: remove monkey patch when clio release is done: https://ripplelabs.atlassian.net/browse/CLIO-260
+xrpl.models.Ledger = Ledger
 logger = logging.getLogger(__name__)
 log_queue = queue.Queue(-1)
 queue_handler = QueueHandler(log_queue)
@@ -41,6 +42,11 @@ listener = QueueListener(log_queue)
 listener.start()
 #logging.basicConfig(level=logging.INFO)
 
+backfill_endpoints = {
+    "mainnet": "https://s2-clio.ripple.com:51234/",
+    "testnet": "https://s.altnet.rippletest.net:51234/"
+}
+
 
 async def start_ledger_sequence(client) -> int:
     return await get_latest_validated_ledger_sequence(client) - 1
@@ -48,16 +54,15 @@ async def start_ledger_sequence(client) -> int:
 
 async def amain_file(
         file: str = None,
-        xrpl_endpoint: str = "https://s2.ripple.com:51234",
         fluent_tag: str = "test",
         fluent_host: str = "0.0.0.0",
         fluent_port: int = 25225,
         schema: str = "transaction",
 ):
-    file_data_source = FileDataSource(
-        file = file,
-    )
-
+    xrpl_endpoint = backfill_endpoints[fluent_tag]
+    if xrpl_endpoint is None:
+        raise RuntimeError("[ExtractXRPLTransactions] missing xrpl endpoint - did you forget to specify the fluent tag?")
+    file_data_source = FileDataSource(file = file)
     file_data_source.start()
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     ledger_record_source_sink = QueueSourceSink(
@@ -142,11 +147,13 @@ async def amain_file(
 
 
 async def amain(
-    xrpl_endpoint: str = "s2-clio.ripple.com:51234/",
     fluent_tag: str = "mainnet",
     fluent_host: str = "0.0.0.0",
     fluent_port: int = 25225,
 ):
+    xrpl_endpoint = backfill_endpoints[fluent_tag]
+    if xrpl_endpoint is None:
+        raise RuntimeError("[ExtractXRPLTransactions] missing xrpl endpoint - did you forget to specify the fluent tag?")
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     start_index = await start_ledger_sequence(async_rpc_client)
 
@@ -270,13 +277,6 @@ def parse_arguments() -> argparse.Namespace:
         type = int,
         default = 25225,
     )
-    arg_parser.add_argument(
-        "-x",
-        "--xrpl_endpoint",
-        help = "specify the rippled RESTful API endpoint",
-        type = str,
-        default = "https://s2.ripple.com:51234",
-    )
 
     arg_parser.add_argument(
         "-f",
@@ -300,7 +300,6 @@ if __name__ == "__main__":
         logger.warning("running other main")
         if args.file is None:
             asyncio.run(amain(
-                xrpl_endpoint = args.xrpl_endpoint,
                 fluent_tag = args.fluent_tag,
                 fluent_host = args.fluent_host,
                 fluent_port = args.fluent_port,
@@ -308,7 +307,6 @@ if __name__ == "__main__":
         else:
             asyncio.run(amain_file(
                 file = args.file,
-                xrpl_endpoint = args.xrpl_endpoint,
                 fluent_tag = args.fluent_tag,
                 fluent_host = args.fluent_host,
                 fluent_port = args.fluent_port,
