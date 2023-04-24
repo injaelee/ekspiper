@@ -32,7 +32,7 @@ from prometheus_client import (
     generate_latest,
 )
 
-from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence, uncache
+from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence
 
 # TODO: remove monkey patch when clio release is done: https://ripplelabs.atlassian.net/browse/CLIO-260
 xrpl.models.Ledger = ekspiper.util.xrplpy_patches.Ledger
