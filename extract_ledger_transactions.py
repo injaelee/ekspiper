@@ -3,6 +3,8 @@ import asyncio
 import queue
 from logging.handlers import QueueHandler, QueueListener
 
+from xrpl.models import Ledger
+
 from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
@@ -24,13 +26,12 @@ from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLObjectSchema, XRPLLed
 from ekspiper.metric.prom import ScriptExecutionMetrics
 import logging
 from xrpl.asyncio.clients import AsyncJsonRpcClient
-from xrpl.asyncio.ledger import get_latest_validated_ledger_sequence
 from prometheus_client import (
     CollectorRegistry,
     generate_latest,
-    push_to_gateway,
 )
 
+from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence
 
 logger = logging.getLogger(__name__)
 log_queue = queue.Queue(-1)
