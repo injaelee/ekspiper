@@ -3,6 +3,9 @@ import asyncio
 import queue
 from logging.handlers import QueueHandler, QueueListener
 
+import xrpl
+
+import ekspiper.util.xrplpy_patches
 from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
@@ -29,11 +32,10 @@ from prometheus_client import (
     generate_latest,
 )
 
-from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence, Ledger
-import xrpl.models
+from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence, uncache
 
 # TODO: remove monkey patch when clio release is done: https://ripplelabs.atlassian.net/browse/CLIO-260
-xrpl.models.Ledger = Ledger
+xrpl.models.Ledger = ekspiper.util.xrplpy_patches.Ledger
 logger = logging.getLogger(__name__)
 log_queue = queue.Queue(-1)
 queue_handler = QueueHandler(log_queue)

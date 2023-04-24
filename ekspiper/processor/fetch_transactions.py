@@ -1,13 +1,11 @@
 import copy
 from typing import Any, Dict, Generic, List, TypeVar, Union
 
-from xrpl.models import Ledger
+import xrpl.models
 
 from ekspiper.processor.base import EntryProcessor
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 import logging
-
-# from ekspiper.util.xrplpy_patches import Ledger
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +52,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
         )
 
         # build the request
-        req = Ledger(
+        req = xrpl.models.Ledger(
             ledger_index = ledger_index,
             transactions = True,
             expand = True,
