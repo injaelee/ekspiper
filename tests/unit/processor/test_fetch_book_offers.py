@@ -1,8 +1,10 @@
-from ekspiper.processor.fetch_book_offers import BuildBookOfferRequestsProcessor
-from xrpl.models.requests.book_offers import BookOffers
-from xrpl.models.currencies import XRP, IssuedCurrency
 import json
 import unittest
+
+from xrpl.models.currencies import XRP, IssuedCurrency
+from xrpl.models.requests.book_offers import BookOffers
+
+from ekspiper.processor.fetch_book_offers import BuildBookOfferRequestsProcessor
 
 sample_transaction_json = """
 {
@@ -116,6 +118,8 @@ sample_transaction_json = """
   "validated": true
 }
 """
+
+
 class BookOfferProcessorsTest(unittest.IsolatedAsyncioTestCase):
     async def test_build_book_offers_requests(self):
         input_entry = json.loads(sample_transaction_json)
@@ -125,17 +129,16 @@ class BookOfferProcessorsTest(unittest.IsolatedAsyncioTestCase):
         )
 
         expected_output = [
-          BookOffers(
-            taker_gets = IssuedCurrency(
-              currency = "USD",
-              issuer = "rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
+            BookOffers(
+                taker_gets=IssuedCurrency(
+                    currency="USD",
+                    issuer="rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
+                ),
+                taker_pays=XRP(),
             ),
-            taker_pays = XRP(),
-          ),
         ]
 
         self.assertEqual(len(expected_output), len(book_offer_requests))
         for actual_value, expected_value in zip(book_offer_requests, expected_output):
-          self.assertEqual(actual_value.taker_gets, expected_value.taker_gets)
-          self.assertEqual(actual_value.taker_pays, expected_value.taker_pays)
-        
+            self.assertEqual(actual_value.taker_gets, expected_value.taker_gets)
+            self.assertEqual(actual_value.taker_pays, expected_value.taker_pays)

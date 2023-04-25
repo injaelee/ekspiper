@@ -1,7 +1,7 @@
 import collections
-import time
-from typing import List
 import logging
+from typing import List
+
 from ekspiper.collector.output import OutputCollector
 from ekspiper.util.callable import RetryWrapper
 
@@ -67,12 +67,12 @@ class TemplateFlow:
                 # Collectors
                 for m in output_messages:
                     # if type(m) is dict:
-                        #  message_dict = dict(m)
-                        # if message_dict.get("ledger") is not None and dict(message_dict.get("ledger")).get("close_time") is not None:
-                        #     logger.warning("start time: " + str(epoch_time_start) + " current ledger time " + str(m.get("ledger").get("close_time")))
-                        #     if epoch_time_start > m.get("ledger").get("close_time"):
-                        #         should_stop = True
-                        #         logger.warning("stopping processors since start time " + str(epoch_time_start) + " is greater than ledger time " + str(m.get("ledger").get("close_time")))
+                    #  message_dict = dict(m)
+                    # if message_dict.get("ledger") is not None and dict(message_dict.get("ledger")).get("close_time") is not None:
+                    #     logger.warning("start time: " + str(epoch_time_start) + " current ledger time " + str(m.get("ledger").get("close_time")))
+                    #     if epoch_time_start > m.get("ledger").get("close_time"):
+                    #         should_stop = True
+                    #         logger.warning("stopping processors since start time " + str(epoch_time_start) + " is greater than ledger time " + str(m.get("ledger").get("close_time")))
 
                     for c in pc.collectors:
                         await c.acollect_output(m)

@@ -1,4 +1,5 @@
 import unittest
+
 from ekspiper.schema.attribute import AttributeTypeMappingCollector
 
 
@@ -64,8 +65,8 @@ class CollectorTestCases(unittest.TestCase):
         attribute_type_mapping = type_mapping_collector.get_mapping()
         print(attribute_type_mapping)
         for key, type_set in answer_dict.items():
-            self.assertIsNotNone(attribute_type_mapping.get(key), "No key exists for key '{key}'".format(key = key))
-            self.assertEqual(attribute_type_mapping.get(key), type_set, "Not equal for key '{key}'".format(key = key))
+            self.assertIsNotNone(attribute_type_mapping.get(key), "No key exists for key '{key}'".format(key=key))
+            self.assertEqual(attribute_type_mapping.get(key), type_set, "Not equal for key '{key}'".format(key=key))
 
         # number of keys must match
         self.assertEqual(len(answer_dict), len(attribute_type_mapping))

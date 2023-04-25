@@ -1,49 +1,50 @@
-from ekspiper.template.processor import TemplateFlow, ProcessCollectorsMap
-from ekspiper.processor.base import EntryProcessor
-from ekspiper.collector.output import OutputCollector
-from ekspiper.connect.queue import QueueSourceSink
-from typing import Any, List, Tuple
 import asyncio
 import unittest
+from typing import Any, List, Tuple
+
+from ekspiper.collector.output import OutputCollector
+from ekspiper.connect.queue import QueueSourceSink
+from ekspiper.processor.base import EntryProcessor
+from ekspiper.template.processor import TemplateFlow, ProcessCollectorsMap
 
 
 class _TestStringProcessor(EntryProcessor):
     async def aprocess(self,
-        entry: str,
-    ) -> List[Tuple[str, str]]:
+                       entry: str,
+                       ) -> List[Tuple[str, str]]:
         return [(entry + '_a', entry + '_b')]
 
 
 class _TestOutputCollector(OutputCollector):
     def __init__(self,
-        prefix: str,
-    ):
+                 prefix: str,
+                 ):
         self.prefix = prefix
         self.outputs = []
 
     async def acollect_output(self,
-        entry: Any,
-    ):
+                              entry: Any,
+                              ):
         for v in entry:
             self.outputs.append(self.prefix + v)
 
 
 class TemplateFlowTest(unittest.IsolatedAsyncioTestCase):
-    
+
     async def test_template_processor(self):
         output_collectors = [
-            _TestOutputCollector(prefix = "1::"),
-            _TestOutputCollector(prefix = "2::"),
-            _TestOutputCollector(prefix = "3::"),
+            _TestOutputCollector(prefix="1::"),
+            _TestOutputCollector(prefix="2::"),
+            _TestOutputCollector(prefix="3::"),
         ]
         process_collectors_pairs = [
             ProcessCollectorsMap(
-                processor = _TestStringProcessor(),
-                collectors = output_collectors,
+                processor=_TestStringProcessor(),
+                collectors=output_collectors,
             )
         ]
         template_flow = TemplateFlow(
-            process_collectors_maps = process_collectors_pairs
+            process_collectors_maps=process_collectors_pairs
         )
 
         # prepare a few inputs
@@ -52,13 +53,13 @@ class TemplateFlowTest(unittest.IsolatedAsyncioTestCase):
         async_queue.put_nowait("TWO")
         async_queue.put_nowait("THREE")
         q = QueueSourceSink(async_queue)
-        
+
         # stop immediately to start the draining mode
         # so that we don't indefinitely wait
-        q.stop() 
+        q.stop()
 
         await template_flow.aexecute(
-            message_iterator = q,
+            message_iterator=q,
         )
 
         expected_outputs = [

@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Optional, Union, cast
 
+from xrpl.asyncio.clients import Client, XRPLRequestFailureException
 from xrpl.models.requests.request import Request, RequestMethod
 from xrpl.models.utils import require_kwargs_on_init
-
-from xrpl.asyncio.clients import Client, XRPLRequestFailureException
 
 
 async def get_latest_validated_ledger_sequence(client: Client) -> int:

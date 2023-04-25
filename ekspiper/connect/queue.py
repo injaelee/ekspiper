@@ -1,20 +1,20 @@
 import asyncio
 import logging
-from typing import Callable, Generic, TypeVar
-from .data import DataSource, DataSink
-import traceback
 import sys
+import traceback
+from typing import Callable
 
+from .data import DataSource, DataSink
 
 logger = logging.getLogger(__name__)
 
 
 class QueueSourceSink(DataSource, DataSink):
     def __init__(self,
-        async_queue: asyncio.Queue = None,
-        name: str = "",
-        done_callback: Callable[[], None] = None,
-    ):
+                 async_queue: asyncio.Queue = None,
+                 name: str = "",
+                 done_callback: Callable[[], None] = None,
+                 ):
         self.name = name
         self.async_queue = async_queue if async_queue else asyncio.Queue()
         self.is_stop = False
@@ -28,7 +28,7 @@ class QueueSourceSink(DataSource, DataSink):
 
     async def __anext__(self):
         logging.debug(
-            "Queue '%s' length: %d", 
+            "Queue '%s' length: %d",
             self.name,
             self.async_queue.qsize(),
         )
@@ -37,14 +37,13 @@ class QueueSourceSink(DataSource, DataSink):
                 if self.done_callback:
                     self.done_callback()
             except Exception as e:
-                traceback.print_exc(file = sys.stdout)
+                traceback.print_exc(file=sys.stdout)
             finally:
                 raise StopAsyncIteration
 
         return await self.async_queue.get()
 
     async def put(self,
-        entry,
-    ):
+                  entry,
+                  ):
         await self.async_queue.put(entry)
-

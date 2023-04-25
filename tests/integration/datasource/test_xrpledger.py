@@ -1,9 +1,7 @@
-import asyncio
-from unittest import mock
-from unittest.mock import MagicMock, patch
-
-from xrpl.asyncio.clients import AsyncJsonRpcClient, AsyncWebsocketClient
 import unittest
+from unittest.mock import patch
+
+from xrpl.asyncio.clients import AsyncJsonRpcClient
 
 from ekspiper.connect.xrpledger import LedgerCreationDataSource, LedgerObjectDataSource
 
@@ -14,14 +12,14 @@ class LedgerCreationDataSourceTest(unittest.IsolatedAsyncioTestCase):
         ledger_creation_itr = LedgerCreationDataSource()
         ledger_creation_itr.start()
 
-        async for value in ledger_creation_itr: 
+        async for value in ledger_creation_itr:
             ledger_creation_itr.stop()
             self.assertTrue(value.get("result"))
 
     @patch('xrpl.asyncio.clients.AsyncWebsocketClient')
     async def test_start(self, mock_client):
         data_source = LedgerCreationDataSource()
-        mock_client.__aiter__.return_value = [1,2,3,4,5]
+        mock_client.__aiter__.return_value = [1, 2, 3, 4, 5]
 
         await data_source._start()
 
@@ -35,10 +33,10 @@ class LedgerCreationDataSourceTest(unittest.IsolatedAsyncioTestCase):
     async def test_ledger_object(self):
         async_rpc_client = AsyncJsonRpcClient("https://s2.ripple.com:51234/")
         ledger_obj_itr = LedgerObjectDataSource(
-            rpc_client = async_rpc_client,
+            rpc_client=async_rpc_client,
         )
         ledger_obj_itr.start()
-        
+
         entry_count = 0
         async for value in ledger_obj_itr:
             ledger_obj_itr.stop()

@@ -1,16 +1,16 @@
 import argparse
-import json
-from collections import namedtuple
-from google.cloud import bigquery
-from xrp import XRPLObjectSchema, XRPLTransactionSchema, XRPLLedgerSchema
-from typing import Dict, List, Set
 import datetime
 import logging
 import sys
 import unittest
+from collections import namedtuple
+from typing import Dict, List, Set
+
+from google.cloud import bigquery
+
+from xrp import XRPLObjectSchema, XRPLTransactionSchema, XRPLLedgerSchema
 
 IntermediateNode = namedtuple("IntermediateNode", ["prefix", "name", "obj"])
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +30,13 @@ class BigQuerySchemaBottomUpBuilder:
         }
 
     def _type_to_data_type(self,
-        python_type: type,
-    ) -> str:
+                           python_type: type,
+                           ) -> str:
         return self.to_gcp_bq_data_type.get(python_type)
 
     def build_from_stack(self,
-        obj_stack: List[IntermediateNode],
-    ) -> List[bigquery.SchemaField]:
+                         obj_stack: List[IntermediateNode],
+                         ) -> List[bigquery.SchemaField]:
 
         built_fields: List[bigquery.SchemaField] = []
         named_google_schema_fields: Dict[str, List[bigquery.SchemaField]] = {}
@@ -46,7 +46,7 @@ class BigQuerySchemaBottomUpBuilder:
             current_node = obj_stack.pop()
 
             # parent found: create the parent
-            if current_node.obj in {list, dict}: #prev_node and current_node.name == prev_node.prefix:
+            if current_node.obj in {list, dict}:  # prev_node and current_node.name == prev_node.prefix:
 
                 key_name = current_node.name[len(current_node.prefix):]
 
@@ -56,14 +56,14 @@ class BigQuerySchemaBottomUpBuilder:
                 google_schema_fields = named_google_schema_fields.get(current_node.name, [])
 
                 obj_stack.append(IntermediateNode(
-                    prefix = current_node.prefix,
-                    name = current_node.name,
-                    obj = bigquery.SchemaField(
+                    prefix=current_node.prefix,
+                    name=current_node.name,
+                    obj=bigquery.SchemaField(
                         key_name,
                         "RECORD" if google_schema_fields else "STRING",
-                        mode = "NULLABLE" if current_node.obj == dict else "REPEATED",
-                        fields = named_google_schema_fields.get(current_node.name, []),
-                )))
+                        mode="NULLABLE" if current_node.obj == dict else "REPEATED",
+                        fields=named_google_schema_fields.get(current_node.name, []),
+                    )))
 
                 if current_node.name in named_google_schema_fields:
                     del named_google_schema_fields[current_node.name]
@@ -86,8 +86,8 @@ class BigQuerySchemaBottomUpBuilder:
         return built_fields
 
     def build(self,
-        schema_dict: Dict[str, Set[type]],
-    ) -> List[bigquery.SchemaField]:
+              schema_dict: Dict[str, Set[type]],
+              ) -> List[bigquery.SchemaField]:
 
         obj_stack: List[IntermediateNode] = []
 
@@ -109,41 +109,40 @@ class BigQuerySchemaBottomUpBuilder:
             else:
                 python_type = next(iter(data_type_set))
                 bg_data_type = self._type_to_data_type(
-                    python_type = python_type,
+                    python_type=python_type,
                 )
                 obj = bigquery.SchemaField(
                     key,
                     bg_data_type,
-                    mode = "NULLABLE",
+                    mode="NULLABLE",
                 )
 
             obj_stack.append(IntermediateNode(
-                prefix = prefix_key,
-                name = full_key,
-                obj = obj,
+                prefix=prefix_key,
+                name=full_key,
+                obj=obj,
             ))
 
-
         built_fields: List[bigquery.SchemaField] = self.build_from_stack(
-            obj_stack = obj_stack,
+            obj_stack=obj_stack,
         )
         return built_fields
 
 
 class BigQueryTableBuilder:
     def build(self,
-        project_name: str,
-        dataset_name: str,
-        table_name: str,
-        schema: List[bigquery.SchemaField],
-    ):
+              project_name: str,
+              dataset_name: str,
+              table_name: str,
+              schema: List[bigquery.SchemaField],
+              ):
         # set up the 'GOOGLE_APPLICATION_CREDENTIALS' env variable
         client = bigquery.Client()
 
         table_id = f"{project_name}.{dataset_name}.{table_name}"
         table = bigquery.Table(
             table_id,
-            schema = schema,
+            schema=schema,
         )
         table = client.create_table(table)  # Make an API request.
         print(f"Created table {table.project}.{table.dataset_id}.{table.table_id}")
@@ -151,21 +150,21 @@ class BigQueryTableBuilder:
 
 class BigQueryTableUpdater:
     def update(self,
-        project_name: str,
-        dataset_name: str,
-        table_name: str,
-        schema: List[bigquery.SchemaField],
-    ):
+               project_name: str,
+               dataset_name: str,
+               table_name: str,
+               schema: List[bigquery.SchemaField],
+               ):
         # set up the 'GOOGLE_APPLICATION_CREDENTIALS' env variable
         client = bigquery.Client()
 
         table_id = f"{project_name}.{dataset_name}.{table_name}"
         table = bigquery.Table(
             table_id,
-            schema = schema,
+            schema=schema,
         )
 
-        #column_names = [x.name for x in table.schema]
+        # column_names = [x.name for x in table.schema]
         table = client.update_table(table, ['schema'])  # Make an API request.
         print(f"Updated table {table.project}.{table.dataset_id}.{table.table_id}")
 
@@ -186,29 +185,29 @@ class SchemaBuilderTest(unittest.TestCase):
         }
         bg_query_schema_builder = BigQuerySchemaBottomUpBuilder()
         bg_schema_fields = bg_query_schema_builder.build(
-            schema_dict = schema,
+            schema_dict=schema,
         )
 
         expected_schema_fields = [
-            bigquery.SchemaField("ListStrings", "STRING", mode = "REPEATED"),
-            bigquery.SchemaField("Amount", "RECORD", mode = "NULLABLE", fields = [
-                bigquery.SchemaField("value", "STRING", mode = "NULLABLE"),
-                bigquery.SchemaField("objs", "RECORD", mode = "REPEATED", fields = [
-                    bigquery.SchemaField("value", "INTEGER", mode = "NULLABLE"),
-                    bigquery.SchemaField("name", "STRING", mode = "NULLABLE"),
+            bigquery.SchemaField("ListStrings", "STRING", mode="REPEATED"),
+            bigquery.SchemaField("Amount", "RECORD", mode="NULLABLE", fields=[
+                bigquery.SchemaField("value", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("objs", "RECORD", mode="REPEATED", fields=[
+                    bigquery.SchemaField("value", "INTEGER", mode="NULLABLE"),
+                    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
                 ]),
-                bigquery.SchemaField("issuer", "STRING", mode = "NULLABLE"),
-                bigquery.SchemaField("currency", "STRING", mode = "NULLABLE"),
+                bigquery.SchemaField("issuer", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("currency", "STRING", mode="NULLABLE"),
             ]),
-            bigquery.SchemaField("Amendment", "STRING", mode = "NULLABLE"),
-            bigquery.SchemaField("Account", "STRING", mode = "NULLABLE")
+            bigquery.SchemaField("Amendment", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("Account", "STRING", mode="NULLABLE")
         ]
 
         # recursive function to determine equal content and structure
         def equal_schema_fields(
-            assertion: unittest.TestCase,
-            expected_fields: List[bigquery.SchemaField],
-            actual_fields: List[bigquery.SchemaField],
+                assertion: unittest.TestCase,
+                expected_fields: List[bigquery.SchemaField],
+                actual_fields: List[bigquery.SchemaField],
         ) -> bool:
             assertion.assertEqual(len(expected_fields), len(actual_fields))
             for expected_field in expected_fields:
@@ -233,51 +232,51 @@ class SchemaBuilderTest(unittest.TestCase):
 
 
 def update_bigquery_table(
-    project_name: str,
-    dataset_name: str,
-    table_name: str,
-    schema: Dict[str, Set[str]],
+        project_name: str,
+        dataset_name: str,
+        table_name: str,
+        schema: Dict[str, Set[str]],
 ):
     bg_query_schema_builder = BigQuerySchemaBottomUpBuilder()
     bg_schema_fields = bg_query_schema_builder.build(
-        schema_dict = schema,
+        schema_dict=schema,
     )
 
     bg_query_schema_updater = BigQueryTableUpdater()
     bg_schema_fields = bg_query_schema_updater.update(
-        project_name = project_name,
-        dataset_name = dataset_name,
-        table_name = table_name,
-        schema = bg_schema_fields,
+        project_name=project_name,
+        dataset_name=dataset_name,
+        table_name=table_name,
+        schema=bg_schema_fields,
     )
 
 
 def build_bigquery_table(
-    project_name: str,
-    dataset_name: str,
-    table_name: str,
-    schema: Dict[str, Set[str]],
+        project_name: str,
+        dataset_name: str,
+        table_name: str,
+        schema: Dict[str, Set[str]],
 ):
     bg_query_schema_builder = BigQuerySchemaBottomUpBuilder()
     bg_schema_fields = bg_query_schema_builder.build(
-        schema_dict = schema,
+        schema_dict=schema,
     )
 
     bq_table_builder = BigQueryTableBuilder()
     bq_table_builder.build(
-        project_name = project_name,
-        dataset_name = dataset_name,
-        table_name = table_name,
-        schema = bg_schema_fields,
+        project_name=project_name,
+        dataset_name=dataset_name,
+        table_name=table_name,
+        schema=bg_schema_fields,
     )
 
 
 def print_schema(
-    schema: Dict[str, Set[str]],
+        schema: Dict[str, Set[str]],
 ):
     bg_query_schema_builder = BigQuerySchemaBottomUpBuilder()
     bg_schema_fields = bg_query_schema_builder.build(
-        schema_dict = schema,
+        schema_dict=schema,
     )
     for f in bg_schema_fields:
         print(f)
@@ -288,37 +287,37 @@ if __name__ == "__main__":
 
     arg_parser.add_argument(
         "-p", "--project",
-        help = "specify the project name",
-        type = str,
-        default = "ripplex-ilee-pipeline",
+        help="specify the project name",
+        type=str,
+        default="ripplex-ilee-pipeline",
     )
     arg_parser.add_argument(
         "-d", "--dataset",
-        help = "specify dataset name",
-        type = str,
-        default = "raw_xrpl_data",
+        help="specify dataset name",
+        type=str,
+        default="raw_xrpl_data",
     )
     arg_parser.add_argument(
         "-t", "--table",
-        help = "specify the table name",
-        type = str,
-        default = "xrpl_ledger_objects",
+        help="specify the table name",
+        type=str,
+        default="xrpl_ledger_objects",
     )
     arg_parser.add_argument(
         "-s", "--schema",
-        help = "specify the schema type",
-        type = str,
+        help="specify the schema type",
+        type=str,
         choices=["", "object", "transaction", "ledger"],
-        default = "",
+        default="",
     )
     arg_parser.add_argument(
         "-ps", "--print",
-        help = "print the specified schema",
+        help="print the specified schema",
         action="store_true",
     )
     arg_parser.add_argument(
         "-u", "--update",
-        help = "update the table with the schema",
+        help="update the table with the schema",
         action="store_true",
     )
 
@@ -342,16 +341,16 @@ if __name__ == "__main__":
 
     elif cli_args.update:
         update_bigquery_table(
-            project_name = cli_args.project,
-            dataset_name = cli_args.dataset,
-            table_name = cli_args.table,
-            schema = schema,
+            project_name=cli_args.project,
+            dataset_name=cli_args.dataset,
+            table_name=cli_args.table,
+            schema=schema,
         )
 
     else:
         build_bigquery_table(
-            project_name = cli_args.project,
-            dataset_name = cli_args.dataset,
-            table_name = cli_args.table,
-            schema = schema,
+            project_name=cli_args.project,
+            dataset_name=cli_args.dataset,
+            table_name=cli_args.table,
+            schema=schema,
         )

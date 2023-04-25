@@ -1,11 +1,11 @@
 import copy
-from typing import Any, Dict, Generic, List, TypeVar, Union
+import logging
+from typing import Any, Dict, List, Union
 
 import xrpl.models
+from xrpl.asyncio.clients import AsyncJsonRpcClient
 
 from ekspiper.processor.base import EntryProcessor
-from xrpl.asyncio.clients import AsyncJsonRpcClient
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -13,25 +13,25 @@ logger = logging.getLogger(__name__)
 class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
     def __init__(self,
-        rpc_client: AsyncJsonRpcClient,
-    ):
+                 rpc_client: AsyncJsonRpcClient,
+                 ):
         # more than efficient for a request-response query pattern
         #  - server is not pushing any information; must have a request
         #  - make sure HTTP keep-alive to avoid reconnect/establishment
         self.rpc_client = rpc_client
 
     async def aprocess(self,
-        entry: Union[int, dict], # ledger index
-    ) -> List[Dict[str, Any]]:
+                       entry: Union[int, dict],  # ledger index
+                       ) -> List[Dict[str, Any]]:
         """
         Presume the entry is the ledger index (int).
         """
         if type(entry) not in [int, dict]:
             raise ValueError(
                 "[XRPLFetchLedgerDetailsProcessor] Expected 'int' but got '%s': %s" % (
-                type(entry),
-                entry,
-            ))
+                    type(entry),
+                    entry,
+                ))
 
         # TODO: input extraction should be done elsewhere; not its responsibility
         if type(entry) == int:
@@ -39,12 +39,12 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
         elif type(entry) == dict:
             ledger_index = entry.get(
                 "result", {}).get("ledger_index") or entry.get("ledger_index")
-        
+
         if not ledger_index:
             raise ValueError(
                 "[XRPLFetchLedgerDetailsProcessor] missing ledger index: %s" % (
-                entry,  
-            ))            
+                    entry,
+                ))
 
         logger.info(
             "[XRPLFetchLedgerDetailsProcessor] Fetching transactions for ledger '%d'",
@@ -53,9 +53,9 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
         # build the request
         req = xrpl.models.Ledger(
-            ledger_index = ledger_index,
-            transactions = True,
-            expand = True,
+            ledger_index=ledger_index,
+            transactions=True,
+            expand=True,
         )
         response = await self.rpc_client.request(req)
 
@@ -75,13 +75,13 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
 class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
     def __init__(self,
-        is_include_ledger_index = True,
-    ):
+                 is_include_ledger_index=True,
+                 ):
         self.is_include_ledger_index = is_include_ledger_index
 
     async def aprocess(self,
-        entry: Dict[str, Any], # ledger response object
-    ) -> List[Dict[str, Any]]:
+                       entry: Dict[str, Any],  # ledger response object
+                       ) -> List[Dict[str, Any]]:
 
         # expectation
         transactions = entry.get("ledger").get("transactions")
@@ -98,7 +98,7 @@ class XRPLExtractTransactionsFromLedgerProcessor(EntryProcessor):
 
 class XRPLLedgerProcessor(EntryProcessor):
     async def aprocess(self,
-                       entry: Dict[str, Any], # ledger response object
+                       entry: Dict[str, Any],  # ledger response object
                        ) -> List[Dict[str, Any]]:
         ledger = copy.deepcopy(entry)
         ledger["transaction_count"] = len(entry.get("ledger").get("transactions"))
@@ -106,14 +106,15 @@ class XRPLLedgerProcessor(EntryProcessor):
 
         return [ledger]
 
+
 class PaymentTransactionSummaryProcessor(EntryProcessor):
-    #def process(self,
+    # def process(self,
     #    entry: Dict[str, Any],
     #    **kwargs,
-    #):
+    # ):
     def _parse_paths(self,
-        paths: List[List[Dict[str,str]]],
-    ) -> List[List[str]]:
+                     paths: List[List[Dict[str, str]]],
+                     ) -> List[List[str]]:
         path_list = []
         for path in paths:
             resolved_path = []
@@ -132,12 +133,12 @@ class PaymentTransactionSummaryProcessor(EntryProcessor):
         return path_list
 
     async def aprocess(self,
-        entry: Dict[str, Any], # ledger response object
-    ) -> List[Dict[str, Any]]:
+                       entry: Dict[str, Any],  # ledger response object
+                       ) -> List[Dict[str, Any]]:
 
         if entry.get("TransactionType") != "Payment":
             return []
-        
+
         offer_count = 1
         path_size = 0
 

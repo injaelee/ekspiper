@@ -1,12 +1,14 @@
-from ekspiper.source.counter import PartitionedCounterDataSource
 import unittest
+
+from ekspiper.source.counter import PartitionedCounterDataSource
+
 
 class PartitionedCounterDataSourceTest(unittest.IsolatedAsyncioTestCase):
     async def test_count_down_contiguous(self):
         data_source = PartitionedCounterDataSource(
-            starting_count = 100,
-            shard_index = 0,
-            shard_size = 1,
+            starting_count=100,
+            shard_index=0,
+            shard_size=1,
         )
         data_source.start()
 
@@ -21,13 +23,12 @@ class PartitionedCounterDataSourceTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(itr_count > 1)
 
-
     async def test_count_down_partitioned(self):
         shard_index = 5
         data_source = PartitionedCounterDataSource(
-            starting_count = 100,
-            shard_index = shard_index,
-            shard_size = 10,
+            starting_count=100,
+            shard_index=shard_index,
+            shard_size=10,
         )
         data_source.start()
 

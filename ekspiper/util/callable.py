@@ -1,25 +1,24 @@
-from typing import Any, Awaitable, Callable, Generic, List, TypeVar
 import asyncio
-import random
 import logging
+import random
 import traceback
-
+from typing import Awaitable, Callable, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
-
 
 I = TypeVar("I")
 O = TypeVar("O")
 
+
 class RetryWrapper(Generic[I, O]):
     async def aretry(self,
-        entry: I,
-        func_handler: Callable[[I], Awaitable[O]],
-        max_retry_count: int = 5,
-        is_mute_stacktrace: bool = False,
-        base_sleep_s: int = 2,
-        sleep_multiplier: float = 1.5,
-    ) -> O:
+                     entry: I,
+                     func_handler: Callable[[I], Awaitable[O]],
+                     max_retry_count: int = 5,
+                     is_mute_stacktrace: bool = False,
+                     base_sleep_s: int = 2,
+                     sleep_multiplier: float = 1.5,
+                     ) -> O:
         iteration_count = 0
         is_value_set = False
         out: O = None
@@ -30,7 +29,7 @@ class RetryWrapper(Generic[I, O]):
                 is_value_set = True
                 break
             except Exception as e:
-                sleep_time_s = base_sleep_s * sleep_multiplier ** iteration_count + random.randrange(2,8)
+                sleep_time_s = base_sleep_s * sleep_multiplier ** iteration_count + random.randrange(2, 8)
                 logger.error(
                     "[iteration:%d] Sleeping %f seconds after receiving message has failure: %s",
                     iteration_count,

@@ -1,26 +1,18 @@
 import asyncio
-from xrpl.asyncio.clients import (
-    AsyncWebsocketClient,
-    AsyncJsonRpcClient,
-)
-from xrpl.models import Subscribe, Unsubscribe, StreamParameter
-from xrpl.models.requests.ledger_data import LedgerData
-from typing import Union
 import logging
-import bson
-from .data import DataSource
 
+from .data import DataSource
 
 logger = logging.getLogger(__name__)
 
 
 class PartitionedCounterDataSource(DataSource):
     def __init__(self,
-        starting_count: int,
-        shard_index: int,
-        shard_size: int,
-        incr_by: int = -1,
-    ):
+                 starting_count: int,
+                 shard_index: int,
+                 shard_size: int,
+                 incr_by: int = -1,
+                 ):
         self.async_queue = asyncio.Queue()
         self.is_stop = False
         self.populate_task = None
@@ -38,12 +30,12 @@ class PartitionedCounterDataSource(DataSource):
 
             if self.current_index % self.shard_size != self.shard_index:
                 self.current_index += self.incr_by
-                continue                
+                continue
 
             idx = self.current_index
             self.current_index += self.incr_by
             await self.async_queue.put(idx)
-            await asyncio.sleep(0) # force yielding control
+            await asyncio.sleep(0)  # force yielding control
 
     def stop(self):
         self.is_stop = True

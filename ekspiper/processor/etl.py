@@ -1,11 +1,10 @@
-from .base import EntryProcessor
-from collections import namedtuple
-from ekspiper.schema.xrp import XRPLObjectSchema, XRPLTransactionSchema
-from fluent import sender
-from typing import Any, Dict, List
 import copy
 import logging
+from collections import namedtuple
+from typing import Any, Dict, List
 
+from ekspiper.schema.xrp import XRPLTransactionSchema
+from .base import EntryProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -13,31 +12,31 @@ logger = logging.getLogger(__name__)
 class Validator:
 
     def validate(self,
-        data_entry: Dict[str, Any],
-    ) -> Dict[str, Any]:
+                 data_entry: Dict[str, Any],
+                 ) -> Dict[str, Any]:
         return data_entry
 
 
 class Transformer:
 
     def transform(self,
-        data_entry: Dict[str, Any],
-    ) -> Dict[str, Any]:
+                  data_entry: Dict[str, Any],
+                  ) -> Dict[str, Any]:
         return data_entry
 
 
 class ETLTemplateProcessor(EntryProcessor):
 
     def __init__(self,
-        validator: Validator,
-        transformer: Transformer,
-    ):
+                 validator: Validator,
+                 transformer: Transformer,
+                 ):
         self.validator = validator
         self.transformer = transformer
 
     async def aprocess(self,
-        data_entry: Any,
-    ) -> List[Any]:
+                       data_entry: Any,
+                       ) -> List[Any]:
         validated_entry = self.validator.validate(data_entry)
         if not validated_entry:
             logger.warn("There were NO valid attributes")
@@ -46,13 +45,13 @@ class ETLTemplateProcessor(EntryProcessor):
 
 class GenericValidator(Validator):
     def __init__(self,
-        schema: Dict[str, Any],
-    ):
+                 schema: Dict[str, Any],
+                 ):
         self.schema = schema
 
     def validate(self,
-        data_entry: Dict[str, Any],
-    ) -> Dict[str, Any]:
+                 data_entry: Dict[str, Any],
+                 ) -> Dict[str, Any]:
         """
         Validate the data types
         """
@@ -105,8 +104,8 @@ class GenericValidator(Validator):
 
 class XRPLObjectTransformer(Transformer):
     def transform(self,
-        data_entry: Dict[str, Any],
-    ) -> Dict[str, Any]:
+                  data_entry: Dict[str, Any],
+                  ) -> Dict[str, Any]:
         """
         For the dual types, ie. dict + str, consolidate
         to a single type, say, dict.
@@ -235,8 +234,8 @@ class XRPLGenericTransformer(Transformer):
 
 class XRPLObjectTransformer(Transformer):
     def transform(self,
-        data_entry: Dict[str, Any],
-    ) -> Dict[str, Any]:
+                  data_entry: Dict[str, Any],
+                  ) -> Dict[str, Any]:
         """
         "Amount": {str, dict},
         "Balance": {str, dict},

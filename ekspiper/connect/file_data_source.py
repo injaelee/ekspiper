@@ -1,9 +1,9 @@
-import aiofiles as aiofiles
-
-from .data import DataSource
 import asyncio
 import logging
 
+import aiofiles as aiofiles
+
+from .data import DataSource
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,8 @@ class FileDataSource(DataSource):
                 async for line in f:
                     try:
                         ledger = int(line)
-                        await self.async_queue.put(ledger) # cast to int and add
-                        await asyncio.sleep(0) # force yielding control
+                        await self.async_queue.put(ledger)  # cast to int and add
+                        await asyncio.sleep(0)  # force yielding control
                     except Exception as e:
                         logger.exception(e)
                         logger.error("Couldnt cast line to int ", line)

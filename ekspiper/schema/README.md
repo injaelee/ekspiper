@@ -1,10 +1,13 @@
 # Set up
+
 ## Environment Variable
+
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="KEY_PATH"
 ```
 
 # Usage
+
 ```bash
 -- print the BigQuery schema transation given 
 -- the 'ledger_object' schema

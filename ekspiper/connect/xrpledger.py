@@ -1,17 +1,18 @@
 import asyncio
+import logging
 import sys
 import traceback
+from typing import Callable, Union
 
-from ekspiper.util.callable import RetryWrapper
+import bson
 from xrpl.asyncio.clients import (
     AsyncWebsocketClient,
     AsyncJsonRpcClient,
 )
 from xrpl.models import Subscribe, StreamParameter
 from xrpl.models.requests.ledger_data import LedgerData
-from typing import Callable, Union
-import logging
-import bson
+
+from ekspiper.util.callable import RetryWrapper
 from .data import DataSource
 from ..util.async_iterable_with_timeout import AsyncTimedIterable
 
@@ -20,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 class LedgerCreationDataSource(DataSource):
     def __init__(self,
-        wss_url: str = "wss://s1.ripple.com",
-        done_callback: Callable[[], None] = None,
-        stream_type = StreamParameter.LEDGER,
-    ):
+                 wss_url: str = "wss://s1.ripple.com",
+                 done_callback: Callable[[], None] = None,
+                 stream_type=StreamParameter.LEDGER,
+                 ):
         self.wss_url = wss_url
         self.async_queue = asyncio.Queue()
         self.is_stop = False
@@ -46,7 +47,8 @@ class LedgerCreationDataSource(DataSource):
                 async for message in timed_message_iterator:
                     self.async_queue.put_nowait(message)
             except asyncio.TimeoutError as e:
-                logger.error("[LedgerCreationDataSource] Haven't received a message in 15s, closing connection : " + str(e))
+                logger.error(
+                    "[LedgerCreationDataSource] Haven't received a message in 15s, closing connection : " + str(e))
                 await client.close()
             except Exception as e:
                 logger.error("[LedgerCreationDataSource] Uncaught exception type: " + str(e))
@@ -70,7 +72,7 @@ class LedgerCreationDataSource(DataSource):
                 if self.done_callback:
                     self.done_callback()
             except Exception as e:
-                traceback.print_exc(file = sys.stdout)
+                traceback.print_exc(file=sys.stdout)
             finally:
                 raise StopAsyncIteration
 
@@ -79,12 +81,12 @@ class LedgerCreationDataSource(DataSource):
 
 class LedgerObjectDataSource(DataSource):
     def __init__(self,
-        rpc_client: AsyncJsonRpcClient,
-        ledger_index: Union[int,str] = "current",
-        is_attach_execution_id: bool = True,
-        is_attach_seq: bool = True,
-        done_callback: Callable[[], None] = None,
-    ):
+                 rpc_client: AsyncJsonRpcClient,
+                 ledger_index: Union[int, str] = "current",
+                 is_attach_execution_id: bool = True,
+                 is_attach_seq: bool = True,
+                 done_callback: Callable[[], None] = None,
+                 ):
         # more than efficient for a request-response query pattern
         #  - server is not pushing any information; must have a request
         #  - make sure HTTP keep-alive to avoid reconnect/establishment
@@ -116,8 +118,8 @@ class LedgerObjectDataSource(DataSource):
 
             response = await retry_wrapper.aretry(
                 LedgerData(
-                    ledger_index = self.ledger_index,
-                    marker = next_marker,
+                    ledger_index=self.ledger_index,
+                    marker=next_marker,
                 ),
                 self.rpc_client.request,
             )
@@ -171,7 +173,7 @@ class LedgerObjectDataSource(DataSource):
                 if self.done_callback:
                     self.done_callback()
             except Exception as e:
-                traceback.print_exc(file = sys.stdout)
+                traceback.print_exc(file=sys.stdout)
             finally:
                 raise StopAsyncIteration
 

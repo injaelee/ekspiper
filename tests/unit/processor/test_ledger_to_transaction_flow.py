@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import unittest
 from unittest.mock import MagicMock
 
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -7,12 +8,6 @@ from xrpl.asyncio.clients import AsyncJsonRpcClient
 from ekspiper.builder.flow import ProcessCollectorsMapBuilder, TemplateFlowBuilder
 from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.processor.etl import ETLTemplateProcessor, GenericValidator, XRPLGenericTransformer
-from ekspiper.processor.fetch_book_offers import BuildBookOfferRequestsProcessor
-from xrpl.models.requests.book_offers import BookOffers
-from xrpl.models.currencies import XRP, IssuedCurrency
-import json
-import unittest
-
 from ekspiper.processor.fetch_transactions import XRPLFetchLedgerDetailsProcessor, \
     XRPLExtractTransactionsFromLedgerProcessor
 from ekspiper.schema.xrp import XRPLTestnetSchema
@@ -138,16 +133,16 @@ class LedgerToTransactionTest(unittest.IsolatedAsyncioTestCase):
         ledger_list.__aiter__.return_value = [ledger_idx]
         schemaToUse = XRPLTestnetSchema.SCHEMA
         async_rpc_client = AsyncJsonRpcClient("https://s2.ripple.com:51234")
-        ledger_record_source_sink = QueueSourceSink(name = "ledger_record_source")
-        transaction_sink = QueueSourceSink(name = "transaction_source")
+        ledger_record_source_sink = QueueSourceSink(name="ledger_record_source")
+        transaction_sink = QueueSourceSink(name="transaction_source")
 
         pc_map = ProcessCollectorsMapBuilder().with_processor(
             XRPLFetchLedgerDetailsProcessor(
-                rpc_client = async_rpc_client,
+                rpc_client=async_rpc_client,
             )
         ).add_data_sink_output_collector(
-            data_sink = ledger_record_source_sink,
-            name = "ledger_record_source_sink"
+            data_sink=ledger_record_source_sink,
+            name="ledger_record_source_sink"
         ).build()
 
         flow_payment_detail = TemplateFlowBuilder().add_process_collectors_map(
@@ -155,35 +150,35 @@ class LedgerToTransactionTest(unittest.IsolatedAsyncioTestCase):
         ).build()
 
         ft = [asyncio.create_task(flow_payment_detail.aexecute(
-            message_iterator = ledger_list
+            message_iterator=ledger_list
         ))]
 
-        txn_record_source_sink = QueueSourceSink(name = "txn_record_source_sink")
+        txn_record_source_sink = QueueSourceSink(name="txn_record_source_sink")
         pc_map = ProcessCollectorsMapBuilder().with_processor(
             XRPLExtractTransactionsFromLedgerProcessor(
-                is_include_ledger_index = True,
+                is_include_ledger_index=True,
             )
         ).add_data_sink_output_collector(
-            data_sink = txn_record_source_sink,
-            name = "txn_record_source_sink"
+            data_sink=txn_record_source_sink,
+            name="txn_record_source_sink"
         ).build()
 
         flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
         asyncio.create_task(flow_ledger_to_txns_brk.aexecute(
-            message_iterator = ledger_record_source_sink,
+            message_iterator=ledger_record_source_sink,
         ))
 
         txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
         pc_map = txn_rec_pc_map_builder.with_processor(
             ETLTemplateProcessor(
-                validator = GenericValidator(schemaToUse),
-                transformer = XRPLGenericTransformer(schemaToUse),
+                validator=GenericValidator(schemaToUse),
+                transformer=XRPLGenericTransformer(schemaToUse),
             )
         ).add_data_sink_output_collector(transaction_sink).build()
 
         flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
         asyncio.create_task(flow_txn_record.aexecute(
-            message_iterator = txn_record_source_sink,
+            message_iterator=txn_record_source_sink,
         ))
 
         await asyncio.gather(*ft)
