@@ -5,23 +5,12 @@ services:
     # Using specific version of the Fluent Bit image
     #
     image: "fluent/fluent-bit:2.0.8"
-
-    ports:
-      # {host port}:{container port}
-      # you can connect through 'localhost:24224'
-      # port 24224 is the container port
-      #
-      - "2020:2020"
-      - "24224:24224"
-      - "14224:14224"
-      - "25225:25225"
-
     volumes:
       # point the current config to the container config
       - ./fluent_config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
       # this file is not provided as part of the repository
-      - /home/adavoodi/sa-private-key.json:/fluent-bit/etc/credentials.json
+      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
 
 #    healthcheck:
 #      test: curl -s http://127.0.0.1:2020/api/v1/health
@@ -30,15 +19,9 @@ services:
 #      start_period: 3s
 #      timeout: 10s
 
-#  server_container:
-#    build:
-#      context: .
-#      network: host
-#    depends_on:
-#      - fluent-bit
-##          condition: service_healthy
-#
-#    ports:
-#      - "24224:24224"
-#      - "14224:14224"
-#      - "25225:25225"
+  server_container:
+    build:
+      context: .
+      network: host
+    depends_on:
+      - fluent-bit

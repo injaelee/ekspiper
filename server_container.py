@@ -72,9 +72,8 @@ async def start_template_flows(
     app: web_app.Application,
     xrpl_endpoint: str = "https://s2.ripple.com:51234/",
     fluent_tag: str = None,
-    fluent_host: str = "0.0.0.0",
+    fluent_host: str = "fluent-bit",
     fluent_port: int = 25225,
-    schema: str = "transactions",
 ):
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     fluent_sender = FluentSender(fluent_tag + ".transactions", host = fluent_host, port = fluent_port)

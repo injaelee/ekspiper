@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r /requirements.txt
 ADD ekspiper ./ekspiper
 COPY server_container.py ./
 
-CMD ["python", "server_container.py"]
+CMD ["python", "server_container.py", "-ft", "mainnet"]
