@@ -56,7 +56,6 @@ class ProcessCollectorsMapBuilder:
                                     fluent_sender: FluentSender,
                                     tag_name: str = "",
                                     ) -> ProcessCollectorsMapBuilder:
-        logging.warning("adding fluent collector")
         self.output_collectors.append(FluentCollector(
             fluent_sender=fluent_sender,
             tag_name=tag_name,

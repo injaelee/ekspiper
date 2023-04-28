@@ -44,7 +44,6 @@ class FluentCollector(OutputCollector):
                  ):
         self.tag_name = tag_name
         self.fluent_sender = fluent_sender
-        logger.warning("tag name in fluent collector: " + self.tag_name)
 
     async def acollect_output(self,
                               entry: Dict[str, Any]

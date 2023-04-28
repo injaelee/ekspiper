@@ -23,5 +23,10 @@ services:
     build:
       context: .
       network: host
+    environment:
+      - NETWORK=$NETWORK
     depends_on:
       - fluent-bit
+    ports:
+      - "23223:23223"
+

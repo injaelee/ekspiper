@@ -23,7 +23,7 @@ from ekspiper.processor.fetch_transactions import (
     XRPLExtractTransactionsFromLedgerProcessor, XRPLLedgerProcessor,
 )
 from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLLedgerSchema
-from ekspiper.util import endpoints
+from ekspiper.util.endpoints import endpoints, wss_endpoints
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -79,13 +79,19 @@ async def start_template_flows(
         fluent_host: str = "fluent-bit",
         fluent_port: int = 25225,
 ):
-    xrpl_endpoint = endpoints[fluent_tag]
-    if xrpl_endpoint is None:
+    if fluent_tag not in endpoints:
         raise RuntimeError(
             "[ExtractXRPLTransactions] missing xrpl endpoint - did you forget to specify the fluent tag?")
+
+    xrpl_endpoint = endpoints[fluent_tag]
+    wss_endpoint = wss_endpoints[fluent_tag]
+    logger.info("[ExtractXRPLTransactions] using fluent tag: " + fluent_tag)
+    logger.info("[ExtractXRPLTransactions] using endpoint: " + xrpl_endpoint)
+    logger.info("[ExtractXRPLTransactions] using WSS endpoint: " + wss_endpoint)
+
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     fluent_sender = FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port)
-    ledger_creation_source = LedgerCreationDataSource(wss_url="wss://s1.ripple.com")
+    ledger_creation_source = LedgerCreationDataSource(wss_url=wss_endpoint)
     ledger_record_source_sink = QueueSourceSink(name="ledger_record_source_sink")
     txn_record_source_sink = QueueSourceSink(name="txn_record_source_sink")
     formatted_ledger_source_sink = QueueSourceSink(name="ledger_source_sink")
@@ -163,7 +169,7 @@ async def start_template_flows(
         fluent_sender=FluentSender(fluent_tag + ".ledgers", host=fluent_host, port=fluent_port),
     ).build()
     flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
-    logger.warning("done building, running?")
+    logger.info("done building, running...")
     app["flow_ledger_record"] = asyncio.create_task(flow_ledger_record.aexecute(
         message_iterator=formatted_ledger_source_sink,
     ))
