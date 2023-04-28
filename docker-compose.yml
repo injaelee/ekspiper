@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  fluent-bit:
+    # Using specific version of the Fluent Bit image
+    #
+    image: "fluent/fluent-bit:2.0.8"
+    volumes:
+      # point the current config to the container config
+      - ./fluent_config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+
+      # this file is not provided as part of the repository
+      - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
+
+  #    healthcheck:
+  #      test: curl -s http://127.0.0.1:2020/api/v1/health
+  #      interval: 3s
+  #      retries: 2
+  #      start_period: 3s
+  #      timeout: 10s
+
+  server_container:
+    build:
+      context: .
+      network: host
+    environment:
+      - NETWORK=$NETWORK
+    depends_on:
+      - fluent-bit
+    ports:
+      - "23223:23223"
+

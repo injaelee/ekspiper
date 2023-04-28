@@ -1,10 +1,12 @@
-from ekspiper.util.callable import RetryWrapper
 import unittest
+
+from ekspiper.util.callable import RetryWrapper
 
 
 class RetryWrapperTest(unittest.IsolatedAsyncioTestCase):
     async def test_retries(self):
         called = 2
+
         async def wrappable_func(input: int) -> str:
             nonlocal called
             called -= 1
@@ -17,10 +19,10 @@ class RetryWrapperTest(unittest.IsolatedAsyncioTestCase):
         retry_wrapper = RetryWrapper[int, str]()
         output = await retry_wrapper.aretry(
             value_passed,
-            func_handler = wrappable_func,
-            is_mute_stacktrace = True,
-            base_sleep_s = 0,
-            sleep_multiplier = 0,
+            func_handler=wrappable_func,
+            is_mute_stacktrace=True,
+            base_sleep_s=0,
+            sleep_multiplier=0,
         )
 
         self.assertEqual(expected_value, output)

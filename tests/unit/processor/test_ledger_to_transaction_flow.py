@@ -1,10 +1,16 @@
-import json
+import asyncio
+import logging
 import unittest
+from unittest.mock import MagicMock
 
-from xrpl.models.currencies import XRP, IssuedCurrency
-from xrpl.models.requests.book_offers import BookOffers
+from xrpl.asyncio.clients import AsyncJsonRpcClient
 
-from ekspiper.processor.fetch_book_offers import BuildBookOfferRequestsProcessor
+from ekspiper.builder.flow import ProcessCollectorsMapBuilder, TemplateFlowBuilder
+from ekspiper.connect.queue import QueueSourceSink
+from ekspiper.processor.etl import ETLTemplateProcessor, GenericValidator, XRPLGenericTransformer
+from ekspiper.processor.fetch_transactions import XRPLFetchLedgerDetailsProcessor, \
+    XRPLExtractTransactionsFromLedgerProcessor
+from ekspiper.schema.xrp import XRPLTestnetSchema
 
 sample_transaction_json = """
 {
@@ -120,25 +126,70 @@ sample_transaction_json = """
 """
 
 
-class BookOfferProcessorsTest(unittest.IsolatedAsyncioTestCase):
-    async def test_build_book_offers_requests(self):
-        input_entry = json.loads(sample_transaction_json)
-        processor = BuildBookOfferRequestsProcessor()
-        book_offer_requests = await processor.aprocess(
-            input_entry,
-        )
+class LedgerToTransactionTest(unittest.IsolatedAsyncioTestCase):
+    async def test_build_transactions(self):
+        ledger_idx = 72959850
+        ledger_list = MagicMock()
+        ledger_list.__aiter__.return_value = [ledger_idx]
+        schemaToUse = XRPLTestnetSchema.SCHEMA
+        async_rpc_client = AsyncJsonRpcClient("https://s2.ripple.com:51234")
+        ledger_record_source_sink = QueueSourceSink(name="ledger_record_source")
+        transaction_sink = QueueSourceSink(name="transaction_source")
 
-        expected_output = [
-            BookOffers(
-                taker_gets=IssuedCurrency(
-                    currency="USD",
-                    issuer="rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B",
-                ),
-                taker_pays=XRP(),
-            ),
-        ]
+        pc_map = ProcessCollectorsMapBuilder().with_processor(
+            XRPLFetchLedgerDetailsProcessor(
+                rpc_client=async_rpc_client,
+            )
+        ).add_data_sink_output_collector(
+            data_sink=ledger_record_source_sink,
+            name="ledger_record_source_sink"
+        ).build()
 
-        self.assertEqual(len(expected_output), len(book_offer_requests))
-        for actual_value, expected_value in zip(book_offer_requests, expected_output):
-            self.assertEqual(actual_value.taker_gets, expected_value.taker_gets)
-            self.assertEqual(actual_value.taker_pays, expected_value.taker_pays)
+        flow_payment_detail = TemplateFlowBuilder().add_process_collectors_map(
+            pc_map
+        ).build()
+
+        ft = [asyncio.create_task(flow_payment_detail.aexecute(
+            message_iterator=ledger_list
+        ))]
+
+        txn_record_source_sink = QueueSourceSink(name="txn_record_source_sink")
+        pc_map = ProcessCollectorsMapBuilder().with_processor(
+            XRPLExtractTransactionsFromLedgerProcessor(
+                is_include_ledger_index=True,
+            )
+        ).add_data_sink_output_collector(
+            data_sink=txn_record_source_sink,
+            name="txn_record_source_sink"
+        ).build()
+
+        flow_ledger_to_txns_brk = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+        asyncio.create_task(flow_ledger_to_txns_brk.aexecute(
+            message_iterator=ledger_record_source_sink,
+        ))
+
+        txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
+        pc_map = txn_rec_pc_map_builder.with_processor(
+            ETLTemplateProcessor(
+                validator=GenericValidator(schemaToUse),
+                transformer=XRPLGenericTransformer(schemaToUse),
+            )
+        ).add_data_sink_output_collector(transaction_sink).build()
+
+        flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
+        asyncio.create_task(flow_txn_record.aexecute(
+            message_iterator=txn_record_source_sink,
+        ))
+
+        await asyncio.gather(*ft)
+        logging.warning("finished gather: ")
+
+        transactions = []
+
+        async for transaction in transaction_sink:
+            transactions.append(transaction)
+            logging.warning(transaction)
+            if transaction_sink.async_queue.empty():
+                transaction_sink.stop()
+
+        self.assertEqual(len(transactions), 47)

@@ -1,6 +1,7 @@
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 T = TypeVar("T")
+
 
 class DataSource:
     def __aiter__(self):
@@ -12,6 +13,6 @@ class DataSource:
 
 class DataSink:
     async def put(self,
-        entry: T,
-    ):
+                  entry: T,
+                  ):
         raise NotImplementedError

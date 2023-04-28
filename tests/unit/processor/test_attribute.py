@@ -1,5 +1,6 @@
-from ekspiper.processor.attribute import AttributeCollectionProcessor
 import unittest
+
+from ekspiper.processor.attribute import AttributeCollectionProcessor
 
 
 class AttributeCollectionProcessorTest(unittest.IsolatedAsyncioTestCase):
@@ -13,7 +14,7 @@ class AttributeCollectionProcessorTest(unittest.IsolatedAsyncioTestCase):
             "attribute_a": "a",
         })
         self.assertEqual(1, len(values))
-        
+
         values = await processor.aprocess({
             "attribute_a": "aa",
         })
@@ -33,7 +34,7 @@ class AttributeCollectionProcessorTest(unittest.IsolatedAsyncioTestCase):
         # hence a total of 3 because it includes the
         # 1st one as well
         self.assertEqual(3, len(values))
-        
+
         for av, ev in zip(values, expected_values):
             actual_value = av.split("\t")[1:]
             self.assertEqual(ev, actual_value)

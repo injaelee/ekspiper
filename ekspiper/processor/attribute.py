@@ -1,24 +1,28 @@
-from ekspiper.schema.attribute import AttributeTypeMappingCollector
-from ekspiper.processor.base import EntryProcessor
-from typing import Any, Dict, List, Set
 import random
 import time
+from typing import Any, Dict, List, Set
+
+from ekspiper.processor.base import EntryProcessor
+from ekspiper.schema.attribute import AttributeTypeMappingCollector
+
 
 class AttributeCollectionProcessor(EntryProcessor):
     def __init__(self,
-        data_type_mapping: str = None,
-        init_attribute_mapping: Dict[str, Set[str]] = None,
-    ):
+                 data_type_mapping: str = None,
+                 init_attribute_mapping: Dict[str, Set[str]] = None,
+                 ):
         self.attribute_type_mapping_collector = AttributeTypeMappingCollector(
-            data_type_mapping = data_type_mapping,
-            init_attribute_mapping = init_attribute_mapping,    
+            data_type_mapping=data_type_mapping,
+            init_attribute_mapping=init_attribute_mapping,
         )
         self.latest_key_count = len(
             self.attribute_type_mapping_collector.get_keys())
-    
+
+    # TODO: this only accounts for changes to the keys, not values. can be problematic when we have multiple datatypes
+    #  for a single key, we wont register the change
     async def aprocess(self,
-        entry: Dict[str, Any],
-    ) -> List[Dict[str, Any]]:
+                       entry: Dict[str, Any],
+                       ) -> List[Dict[str, Any]]:
         self.attribute_type_mapping_collector.collect_attributes(entry)
 
         values = []

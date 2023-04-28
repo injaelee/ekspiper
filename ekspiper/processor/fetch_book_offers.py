@@ -1,35 +1,36 @@
-from xrpl.asyncio.clients import AsyncJsonRpcClient
-from xrpl.models.requests.book_offers import BookOffers
-from xrpl.models.currencies import XRP, IssuedCurrency
-from ekspiper.processor.base import EntryProcessor
-from typing import Any, Dict, List, Union
 import logging
+from typing import Any, Dict, List, Union
 
+from xrpl.asyncio.clients import AsyncJsonRpcClient
+from xrpl.models.currencies import XRP, IssuedCurrency
+from xrpl.models.requests.book_offers import BookOffers
+
+from ekspiper.processor.base import EntryProcessor
 
 logger = logging.getLogger(__name__)
 
 
 class XRPLFetchBookOffersProcessor(EntryProcessor):
     def __init__(self,
-        rpc_client: AsyncJsonRpcClient,
-    ):
+                 rpc_client: AsyncJsonRpcClient,
+                 ):
         # more than efficient for a request-response query pattern
         #  - server is not pushing any information; must have a request
         #  - make sure HTTP keep-alive to avoid reconnect/establishment
         self.rpc_client = rpc_client
 
     async def aprocess(self,
-        entry: BookOffers,
-    ) -> List[Dict[str, Any]]:
+                       entry: BookOffers,
+                       ) -> List[Dict[str, Any]]:
         """
         Presume the entry is the BookOffers
         """
         if type(entry) != BookOffers:
             raise ValueError(
                 "[XRPLFetchBookOffersProcessor] Expected 'BookOffers' but got '%s': %s" % (
-                type(entry),
-                entry,
-            ))
+                    type(entry),
+                    entry,
+                ))
 
         logger.info(
             "[XRPLFetchBookOffersProcessor] Fetching book offers: %s",
@@ -53,16 +54,16 @@ class XRPLFetchBookOffersProcessor(EntryProcessor):
 
 
 class BuildBookOfferRequestsProcessor(EntryProcessor):
-    
+
     def build_currency(self,
-        value: Union[str,Dict],
-    ) -> Union[XRP, IssuedCurrency]:
+                       value: Union[str, Dict],
+                       ) -> Union[XRP, IssuedCurrency]:
         if type(value) == str:
             return XRP()
 
         amt = IssuedCurrency(
-            currency = value.get("currency"),
-            issuer = value.get("issuer"),
+            currency=value.get("currency"),
+            issuer=value.get("issuer"),
         )
 
         if amt.currency is None or amt.issuer is None:
@@ -71,8 +72,8 @@ class BuildBookOfferRequestsProcessor(EntryProcessor):
         return amt
 
     async def aprocess(self,
-        entry: Dict[str, Any], # expect response.get("result")
-    ) -> List[BookOffers]:
+                       entry: Dict[str, Any],  # expect response.get("result")
+                       ) -> List[BookOffers]:
 
         # extract all the token pairs
         transactions = entry.get(
@@ -115,17 +116,17 @@ class BuildBookOfferRequestsProcessor(EntryProcessor):
 
         book_offers_requests: List[BookOffer] = []
         for taker_gets_currency, taker_pays_currency in pair_tuple_set:
-                logger.info(
-                    "[BuildBookOfferRequestsProcessor] Enqueue book offer request: [%s], [%s]",
-                    taker_gets_currency,
-                    taker_pays_currency,
-                )
+            logger.info(
+                "[BuildBookOfferRequestsProcessor] Enqueue book offer request: [%s], [%s]",
+                taker_gets_currency,
+                taker_pays_currency,
+            )
 
-                book_offers_requests.append(BookOffers(
-                    ledger_index = ledger_index,
-                    taker_gets = taker_gets_currency,
-                    taker_pays = taker_pays_currency,
-                ))
+            book_offers_requests.append(BookOffers(
+                ledger_index=ledger_index,
+                taker_gets=taker_gets_currency,
+                taker_pays=taker_pays_currency,
+            ))
 
         logger.info("[BuildBookOfferRequestsProcessor] Done iteration.")
 
