@@ -164,7 +164,8 @@ async def amain(
     # Flow: Obtain Ledger Details
     #
     flow_ledger_detail_tasks = []
-    partition_size = 100
+    partition_size = 10
+
     for i in range(partition_size):
         # start with the counter
         index_decrementor_data_source = PartitionedCounterDataSource(
@@ -216,33 +217,15 @@ async def amain(
         message_iterator=ledger_record_source_sink,
     ))
 
-    pc_map_transaction = ProcessCollectorsMapBuilder().with_processor(
-        ETLTemplateProcessor(
-            validator=GenericValidator(XRPLTransactionSchema.SCHEMA),
-            transformer=XRPLGenericTransformer(XRPLTransactionSchema.SCHEMA),
-        )
-    ).with_stdout_output_collector(
-        is_simplified=True
-    ).add_fluent_output_collector(
-        fluent_sender=FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port)
-    ).build()
-
+    pc_map_transaction = build_fluent_map(schema=XRPLTransactionSchema.SCHEMA, fluent_tag=fluent_tag + ".transactions",
+                                          fluent_host=fluent_host, fluent_port=fluent_port)
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_transaction).build()
     flow_txn_record_task = asyncio.create_task(flow_txn_record.aexecute(
         message_iterator=txn_record_source_sink,
     ))
 
-    pc_map_ledgers = ProcessCollectorsMapBuilder().with_processor(
-        ETLTemplateProcessor(
-            validator=GenericValidator(XRPLLedgerSchema.SCHEMA),
-            transformer=XRPLGenericTransformer(XRPLLedgerSchema.SCHEMA),
-        )
-    ).with_stdout_output_collector(
-        tag_name=fluent_tag,
-        is_simplified=True
-    ).add_fluent_output_collector(
-        fluent_sender=FluentSender(fluent_tag + ".ledgers", host=fluent_host, port=fluent_port),
-    ).build()
+    pc_map_ledgers = build_fluent_map(schema=XRPLLedgerSchema.SCHEMA, fluent_tag=fluent_tag + ".ledgers",
+                                      fluent_host=fluent_host, fluent_port=fluent_port)
     flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
     flow_ledger_record_task = asyncio.create_task(flow_ledger_record.aexecute(
         message_iterator=formatted_ledger_source_sink,
@@ -253,6 +236,20 @@ async def amain(
     # await flow_txn_record_task
 
     listener.stop()
+
+
+def build_fluent_map(schema, fluent_tag, fluent_host="0.0.0.0", fluent_port=25225):
+    return ProcessCollectorsMapBuilder().with_processor(
+        ETLTemplateProcessor(
+            validator=GenericValidator(schema),
+            transformer=XRPLGenericTransformer(schema),
+        )
+    ).with_stdout_output_collector(
+        tag_name=fluent_tag,
+        is_simplified=True
+    ).add_fluent_output_collector(
+        fluent_sender=FluentSender(fluent_tag, host=fluent_host, port=fluent_port),
+    ).build()
 
 
 def parse_arguments() -> argparse.Namespace:
