@@ -31,7 +31,7 @@ from ekspiper.processor.fetch_transactions import (
     XRPLExtractTransactionsFromLedgerProcessor, XRPLLedgerProcessor,
 )
 from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLObjectSchema, XRPLLedgerSchema
-from ekspiper.util import endpoints
+from ekspiper.util.endpoints import endpoints
 from ekspiper.util.xrplpy_patches import get_latest_validated_ledger_sequence
 
 # TODO: remove monkey patch when clio release is done: https://ripplelabs.atlassian.net/browse/CLIO-260
