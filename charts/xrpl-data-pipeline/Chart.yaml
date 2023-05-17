@@ -1,0 +1,5 @@
+apiVersion: v2
+name: xrpl-data-pipeline
+description: A XRPL data pipeline to export data to BigQuery and/or other DataWarehouses
+type: application
+version: 0.0.1
