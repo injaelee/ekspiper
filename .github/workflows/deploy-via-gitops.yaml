@@ -1,0 +1,177 @@
+name: Deployment via GitOps
+
+on:
+  workflow_call:
+    inputs:
+      helm_repo_url:
+        required: true
+        type: string
+      helm_chart_dir:
+        required: true
+        type: string
+      helm_chart_name:
+        required: true
+        type: string
+      short_sha:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      docker_image_location:
+        required: true
+        type: string
+      gitops_repository:
+        required: true
+        type: string
+      gitops_path:
+        required: true
+        type: string
+      gitops_dependency_name:
+        required: true
+        type: string
+
+jobs:
+  deploy-app:
+    name: Deploy xrpl-data-pipeline application
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Compute Helm package version
+        id: compute_helm_package_version
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const isTag = "${{ github.ref_type == 'tag' }}"
+            let helmVersion
+            if (isTag === 'true') {
+              console.log('Formatting for tag')
+              const version = "${{ github.ref_name }}"
+              helmVersion = version.startsWith('v') ? version.substring(1) : version
+            } else {
+              const date = new Date()
+              const timestamp = 
+                `${date.toISOString().split('T')[0].replaceAll('-','')}-${String(date.getUTCHours()).padStart(2, "0")}${String(date.getUTCMinutes()).padStart(2, "0")}`
+              console.log(`Formatting for short sha of ${{ inputs.short_sha }}`)
+              helmVersion = `0.0.0-${timestamp}-${{ inputs.short_sha }}`
+            }
+            console.log(`Calculated Helm package version to be ${helmVersion}`)
+            core.setOutput('version', helmVersion)
+          result-encoding: string
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCR_KEY }}
+          project_id: cbdc-helm-repo
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: cbdc-helm-repo
+      - name: Configure Docker
+        shell: bash
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+      - name: Run Helm package
+        shell: bash
+        run: |
+          HELM_PACKAGING_DIR=helm-package
+          echo '${{ secrets.BIGQUERY_SA_KEY }}' > ${{ inputs.helm_chart_dir }}/credentials.json
+          cp ./fluent_config/fluent-bit.conf ${{ inputs.helm_chart_dir }}/fluent-bit.conf
+          helm dependency build ${{ inputs.helm_chart_dir }}
+
+          mkdir -p ${HELM_PACKAGING_DIR}
+          helm --version ${{ steps.compute_helm_package_version.outputs.version }} -d ./${HELM_PACKAGING_DIR}/ package ${{ inputs.helm_chart_dir }}
+
+          helm push ./${HELM_PACKAGING_DIR}/${{ inputs.helm_chart_name }}-${{ steps.compute_helm_package_version.outputs.version }}.tgz ${{ inputs.helm_repo_url }}
+      - name: 'Clone and branch gitops repository'
+        shell: bash
+        run: |
+          git clone https://${{ secrets.GITOPS_REPO_TOKEN }}@github.com/${{ inputs.gitops_repository }} gitops_repo
+          cd gitops_repo
+          BRANCH_NAME="gitops_push__${{ inputs.version }}"
+          git checkout -b $BRANCH_NAME
+          git config user.email "ripplex-sa-gh-ripplex-cbdc-repo-push@ripple.com"
+          git config user.name "RippleX CBDC GitOps Push"
+      - name: 'Update helm chart version'
+        shell: bash
+        run: |
+          cd gitops_repo
+          cd ${{ inputs.gitops_path }}
+          # update the helm charts package to match the deploy version of the docker image
+          echo "Running yq -i e '(.dependencies[] | select(.name==\"${{ inputs.gitops_dependency_name }}\").version) = \"${{ steps.compute_helm_package_version.outputs.version }}\"' Chart.yaml"
+          yq -i e '(.dependencies[] | select(.name=="${{ inputs.gitops_dependency_name }}").version) = "${{ steps.compute_helm_package_version.outputs.version }}"' Chart.yaml
+      - name: 'Update chart docker image version'
+        shell: bash
+        run: |
+          cd gitops_repo
+          cd ${{ inputs.gitops_path }}
+          # update the version of the docker image
+          echo "Running yq -i e '.${{ inputs.gitops_dependency_name }}.releaseImage = \"${{ inputs.docker_image_location }}\"' values.yaml" 
+          yq -i e '.${{ inputs.gitops_dependency_name }}.releaseImage = "${{ inputs.docker_image_location }}"' values.yaml
+      - id: calculate_branch_name
+        name: Calculate branch name
+        shell: bash
+        run: |
+          echo "value=gitops_push__${{ inputs.version }}" >> $GITHUB_OUTPUT
+      - name: Commit, push to gitops repo and create pull request
+        shell: bash
+        run: |
+          cd gitops_repo
+          git add .
+          git commit -m "Updating for version ${{ inputs.version }}"
+          git push --set-upstream origin ${{ steps.calculate_branch_name.outputs.value }}
+          
+          echo "Creating pull request for ${{ inputs.version }}"
+          PR_RESPONSE=$(curl -sb \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITOPS_REPO_TOKEN }}"\
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ inputs.gitops_repository }}/pulls \
+            -d '{"title":"Updating for version ${{ inputs.version }} ${{ inputs.branch_unique_name_token }}","body":"Automatically generated pull request for version ${{ inputs.version }} ${{ inputs.branch_unique_name_token }}","head":"${{ steps.calculate_branch_name.outputs.value }}","base":"main"}')
+          echo "Response from creating pull request: $PR_RESPONSE"
+          PR_NUMBER=$(echo $PR_RESPONSE | jq '.number')
+          MERGEABLE=$(echo $PR_RESPONSE | jq '.mergeable')
+          echo "Created pull request $PR_NUMBER"
+          
+          ATTEMPTS=0
+          until [ "$MERGEABLE" == "true" ] || [ $ATTEMPTS -ge 3 ]
+          do
+            echo "Pull request $PR_NUMBER not yet mergeable. Updating from main..."
+            curl -L \
+              -X PUT \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITOPS_REPO_TOKEN }}"\
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ inputs.gitops_repository }}/pulls/$PR_NUMBER/update-branch
+            echo "Sleeping 10 seconds to make sure post-update GitHub checks on pull request complete..."
+            sleep 10
+            echo "Checking pull request mergeability again..."
+            GET_PR_RESPONSE=$(curl -sb \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITOPS_REPO_TOKEN }}"\
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ inputs.gitops_repository }}/pulls/$PR_NUMBER)
+            MERGEABLE=$(echo $GET_PR_RESPONSE | jq '.mergeable')
+            if [[ "$MERGEABLE" != "true" ]]
+            then
+              ATTEMPTS=$((ATTEMPTS+1))
+              echo "Attempt $ATTEMPTS of post pull request creation mergeability checking failed. Retrying..."
+              sleep 10
+            fi
+          done
+          
+          if [[ "$MERGEABLE" != "true" ]]
+          then
+              echo "Pull request $PR_NUMBER in repository ${{ inputs.gitops_repository }} was never mergeable after 3 attempts. Please check the PR manually."
+              exit 1
+          fi
+          
+          echo "Merging pull request $PR_NUMBER for ${{ inputs.version }}"
+          curl -L \
+            -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITOPS_REPO_TOKEN }}"\
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ inputs.gitops_repository }}/pulls/$PR_NUMBER/merge \
+            -d '{"commit_title":"Updating for version ${{ inputs.version }} ${{ inputs.branch_unique_name_token }}","commit_message":"Automatically generated pull request for version ${{ inputs.version }} ${{ inputs.branch_unique_name_token }}"}'

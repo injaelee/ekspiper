@@ -1,0 +1,37 @@
+name: Docker build and Docker push
+on:
+  workflow_call:
+    inputs:
+      docker_image_location:
+        type: string
+        required: true
+
+jobs:
+  build_and_publish:
+    name: Run docker build and publish Docker image to GCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCR_KEY }}
+          project_id: cbdc-helm-repo
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: cbdc-helm-repo
+      - name: Configure Docker
+        shell: bash
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image ${{ inputs.docker_image_location }}"
+          docker build -t "${{ inputs.docker_image_location }}" \
+            --build-arg GITHUB_SHA="${{ github.sha }}" \
+            --build-arg GITHUB_REF="${{ github.ref }}" .
+      - name: Publish to GCR
+        run: |
+          echo "Pushing Docker image ${{ inputs.docker_image_location }}"
+          docker push "${{ inputs.docker_image_location }}"

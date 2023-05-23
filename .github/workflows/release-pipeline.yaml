@@ -1,0 +1,87 @@
+name: Release pipeline
+on:
+  release:
+    types: [published]
+
+jobs:
+  pre-build:
+    name: "Pre-build steps"
+    uses: ./.github/workflows/pre-build.yaml
+
+  validate-docker-image:
+    name: 'Validate Docker image does not already exist'
+    needs: [ pre-build ]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCR_KEY }}
+          project_id: cbdc-helm-repo
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: cbdc-helm-repo
+      # Use ! syntax to invert status code: if the image doesn't exist the command succeeds
+      - name: Check for existence of Docker image
+        shell: bash
+        run: |
+          ! gcloud container images describe ${{ needs.pre-build.outputs.docker_image_location }} > /dev/null
+
+  build-and-publish:
+    name: 'Build docker image and push to GCR'
+    needs: [pre-build, validate-docker-image]
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+    with:
+      docker_image_location: ${{ needs.pre-build.outputs.docker_image_location }}
+
+  deploy-dev:
+    name: 'Deploy to Dev'
+    needs: [ pre-build, build-and-publish ]
+    uses: ./.github/workflows/deploy-via-gitops.yaml
+    secrets: inherit
+    with:
+      helm_repo_url: "oci://us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-helm-charts"
+      helm_chart_name: "xrpl-data-pipeline"
+      helm_chart_dir: "./charts"
+      short_sha: ${{ needs.pre-build.outputs.short_sha }}
+      version: ${{ needs.pre-build.outputs.docker_image_tag }}
+      docker_image_location: ${{ needs.pre-build.outputs.docker_image_location }}
+      gitops_repository: "xpring-eng/ripplex-cbdc-gitops"
+      gitops_path: "gcp/sandbox/dev/xrpl-data-pipeline/"
+      gitops_dependency_name: "xrpl-data-pipeline"
+
+  deploy-stg:
+    name: 'Deploy to Stage'
+    needs: [ pre-build, deploy-dev ]
+    if: ${{ github.ref_name == 'main' }}
+    uses: ./.github/workflows/deploy-via-gitops.yaml
+    secrets: inherit
+    with:
+      helm_repo_url: "oci://us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-helm-charts"
+      helm_chart_name: "xrpl-data-pipeline"
+      helm_chart_dir: "./charts"
+      short_sha: ${{ needs.pre-build.outputs.short_sha }}
+      version: ${{ needs.pre-build.outputs.docker_image_tag }}
+      docker_image_location: ${{ needs.pre-build.outputs.docker_image_location }}
+      gitops_repository: "xpring-eng/ripplex-cbdc-gitops"
+      gitops_path: "gcp/sandbox/stg/xrpl-data-pipeline/"
+      gitops_dependency_name: "xrpl-data-pipeline"
+
+  deploy-prod:
+    name: 'Deploy to Prod'
+    needs: [ pre-build, deploy-stg ]
+    if: ${{ github.ref_name == 'main' }}
+    uses: ./.github/workflows/deploy-via-gitops.yaml
+    secrets: inherit
+    with:
+      helm_repo_url: "oci://us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-helm-charts"
+      helm_chart_name: "xrpl-data-pipeline"
+      helm_chart_dir: "./charts"
+      short_sha: ${{ needs.pre-build.outputs.short_sha }}
+      version: ${{ needs.pre-build.outputs.docker_image_tag }}
+      docker_image_location: ${{ needs.pre-build.outputs.docker_image_location }}
+      gitops_repository: "xpring-eng/ripplex-cbdc-gitops"
+      gitops_path: "gcp/sandbox/prd/xrpl-data-pipeline/"
+      gitops_dependency_name: "xrpl-data-pipeline"

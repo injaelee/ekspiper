@@ -3,11 +3,8 @@ fullnameOverride: ""
 
 replicaCount: 1
 
-image:
-  repository: ""
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+releaseImage: ""
+releaseImagePullPolicy: IfNotPresent
 
 imagePullSecrets: []
 
@@ -23,24 +20,23 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-port: 80
+port: 8080
+
+xrplNetwork: debug
 
 fluent:
-  image:
-    repository: fluent/fluent-bit
-    pullPolicy: IfNotPresent
-    # Overrides the image tag whose default is the chart appVersion.
-    tag: 2.0.8
-    forwardPort: 25225
-    httpPort: 24224
-    httpDebugPort: 14224
-    resources:
-      limits:
-        cpu: 200m
-        memory: 128Mi
-      requests:
-        cpu: 100m
-        memory: 64Mi
+  releaseImage: fluent/fluent-bit:2.0.8
+  releaseImagePullPolicy: IfNotPresent
+  forwardPort: 25225
+  httpPort: 24224
+  httpDebugPort: 14224
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
 
 service:
   type: ClusterIP

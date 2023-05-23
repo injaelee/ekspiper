@@ -30,10 +30,12 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.releaseImage }}"
+          command: ["python"]
+          args: ["server_container.py", "-ft", "{{ .Values.xrplNetwork }}"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.releaseImagePullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.port }}
@@ -49,7 +51,8 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
         - name: fluent-bit
-          image: "{{ .Values.fluent.image.repository }}:{{ .Values.fluent.image.tag }}"
+          image: "{{ .Values.fluent.releaseImage }}"
+          imagePullPolicy: {{ .Values.fluent.releaseImagePullPolicy }}
           ports:
             - name: forward
               containerPort: {{ .Values.fluent.forwardPort }}
@@ -63,17 +66,16 @@ spec:
           resources:
             {{- toYaml .Values.fluent.resources | nindent 12 }}
           volumeMounts:
-            - name: fluent-bit-config
-              mountPath: /fluent-bit/etc/
-            - name: fluent-bit-sa-key
+            - name: fluent-bit-secrets-and-config
               mountPath: /fluent-bit/etc/
       volumes:
-        - name: fluent-bit-config
-          configMap:
-            name: fluent-bit-config
-        - name: fluent-bit-sa-key
-          secret:
-            secretName: fluent-bit-sa-key
+        - name: fluent-bit-secrets-and-config
+          projected:
+            sources:
+              - secret:
+                  name: fluent-bit-sa-key
+              - configMap:
+                  name: fluent-bit-config
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

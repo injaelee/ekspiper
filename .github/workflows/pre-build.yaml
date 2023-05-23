@@ -1,0 +1,51 @@
+name: Pre-build Steps
+on:
+  workflow_call:
+    outputs:
+      short_sha:
+        description: 'The short sha'
+        value: ${{ jobs.pre-build.outputs.short_sha }}
+      docker_image_location:
+        description: 'Computed location of docker image'
+        value: ${{ jobs.pre-build.outputs.docker_image_location }}
+      docker_image_tag:
+        description: 'The tag of the Docker image'
+        value: ${{ jobs.pre-build.outputs.docker_image_tag }}
+
+jobs:
+  pre-build:
+    name: "Pre-build steps"
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.compute_short_sha.outputs.short_sha }}
+      docker_image_location: ${{ steps.compute_docker_image_locations.outputs.docker_image_location }}
+      docker_image_tag: ${{ steps.compute_docker_image_tag.outputs.docker_image_tag }}
+    steps:
+      - name: Add SHORT_SHA env property
+        id: compute_short_sha
+        shell: bash
+        run: |
+          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+      - name: Cleanse Github branch name for Docker image tag
+        id: cleanse_branch_name
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const rawBranchName = '${{ github.ref_name }}'
+            core.setOutput('branch_name', rawBranchName.replace('/', '__'))
+          result-encoding: string
+      - name: Compute Docker image tag
+        id: compute_docker_image_tag
+        shell: bash
+        run: |
+          echo "DOCKER_IMAGE_TAG=${{ github.ref_type == 'tag' && github.ref_name || format('{0}-{1}', steps.cleanse_branch_name.outputs.branch_name, steps.compute_short_sha.outputs.short_sha) }}" >> $GITHUB_ENV
+          echo "docker_image_tag=${{ github.ref_type == 'tag' && github.ref_name || format('{0}-{1}', steps.cleanse_branch_name.outputs.branch_name, steps.compute_short_sha.outputs.short_sha) }}" >> $GITHUB_OUTPUT
+          echo "Computed Docker image tag of ${{ env.DOCKER_IMAGE_TAG }}"
+      - name: Compute primary Docker image locations
+        id: compute_docker_image_locations
+        shell: bash
+        run: |
+          echo "DOCKER_IMAGE_LOCATION=us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-images/xrpl-data-pipeline:${{ env.DOCKER_IMAGE_TAG }}" >> $GITHUB_ENV
+          echo "docker_image_location=us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-images/xrpl-data-pipeline:${{ env.DOCKER_IMAGE_TAG }}" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMAGE_LOCATION_UNTAGGED=us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-images/xrpl-data-pipeline" >> $GITHUB_ENV
+          echo "docker_image_location_untagged=us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-images/xrpl-data-pipeline" >> $GITHUB_OUTPUT

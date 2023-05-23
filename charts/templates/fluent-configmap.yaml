@@ -4,4 +4,4 @@ metadata:
   name: fluent-bit-config
 data:
   fluent-bit.conf: |-
-{{ .Files.Get "fluent_config/fluent-bit.conf" | indent 4 }}
+{{ .Files.Get "fluent-bit.conf" | indent 4 }}
