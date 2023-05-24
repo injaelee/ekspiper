@@ -55,7 +55,6 @@ jobs:
   deploy-stg:
     name: 'Deploy to Stage'
     needs: [ pre-build, deploy-dev ]
-    if: ${{ github.ref_name == 'main' }}
     uses: ./.github/workflows/deploy-via-gitops.yaml
     secrets: inherit
     with:
@@ -72,7 +71,6 @@ jobs:
   deploy-prod:
     name: 'Deploy to Prod'
     needs: [ pre-build, deploy-stg ]
-    if: ${{ github.ref_name == 'main' }}
     uses: ./.github/workflows/deploy-via-gitops.yaml
     secrets: inherit
     with:
