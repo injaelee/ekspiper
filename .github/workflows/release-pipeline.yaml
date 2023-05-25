@@ -52,22 +52,6 @@ jobs:
       gitops_path: "gcp/sandbox/dev/xrpl-data-pipeline/"
       gitops_dependency_name: "xrpl-data-pipeline"
 
-  deploy-stg:
-    name: 'Deploy to Stage'
-    needs: [ pre-build, deploy-dev ]
-    uses: ./.github/workflows/deploy-via-gitops.yaml
-    secrets: inherit
-    with:
-      helm_repo_url: "oci://us-central1-docker.pkg.dev/cbdc-helm-repo/ripplex-helm-charts"
-      helm_chart_name: "xrpl-data-pipeline"
-      helm_chart_dir: "./charts"
-      short_sha: ${{ needs.pre-build.outputs.short_sha }}
-      version: ${{ needs.pre-build.outputs.docker_image_tag }}
-      docker_image_location: ${{ needs.pre-build.outputs.docker_image_location }}
-      gitops_repository: "xpring-eng/ripplex-cbdc-gitops"
-      gitops_path: "gcp/sandbox/stg/xrpl-data-pipeline/"
-      gitops_dependency_name: "xrpl-data-pipeline"
-
   deploy-prod:
     name: 'Deploy to Prod'
     needs: [ pre-build, deploy-stg ]
