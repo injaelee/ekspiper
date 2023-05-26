@@ -1,8 +1,11 @@
 import argparse
 import asyncio
 import logging
+import signal
+import sys
 from functools import partial
 
+import yaml
 from aiohttp import web, web_app
 from fluent.asyncsender import FluentSender
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -20,7 +23,7 @@ from ekspiper.processor.etl import (
 )
 from ekspiper.processor.fetch_transactions import (
     XRPLFetchLedgerDetailsProcessor,
-    XRPLExtractTransactionsFromLedgerProcessor, XRPLLedgerProcessor,
+    XRPLExtractTransactionsFromLedgerProcessor, XRPLLedgerProcessor, LedgerIndexProcessor,
 )
 from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLLedgerSchema
 from ekspiper.util.endpoints import endpoints, wss_endpoints
@@ -39,9 +42,25 @@ async def health_check(request):
     return web.Response(text="healthy")
 
 
+def load_from_file(
+        yml_path: str,
+):
+    logger.info("[ServerContainer] loading config from path: " + yml_path)
+    try:
+        with open(yml_path, mode="rt", encoding="utf-8") as file:
+            yml_config = yaml.safe_load(file)
+            logger.info("[ServerContainer] config file: " + str(yml_config))
+    except Exception as e:
+        logger.info("[ServerContainer] Wasn't able to load config file: " + str(e))
+
+    return yml_config
+
+
 async def stop_template_flows(
         app: web_app.Application,
 ):
+    print("Stopping the web application....")
+    on_exit()
     # theoretically, if we stop the sources, flow should
     # drain out and exit gracefully
     app["ledger_creation_source"].stop()
@@ -66,11 +85,26 @@ async def websocket_supervisor(ledger_creation_source):
     while True:
         try:
             logger.warning("Attempting to connect to server...")
-            await ledger_creation_source._start()
+            await ledger_creation_source.start()
         except Exception as e:
             logger.warning("There was an error starting the ledger creation source: " + str(e))
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
+
+
+def on_exit():
+    logger.info("Exiting...")
+    try:
+        if app["ledger_creation_source"].last_ledger is not None:
+            with open(app.ledger_index_file_path, "a+") as f:
+                if type(app["ledger_creation_source"].last_ledger) is not str:
+                    raise Exception("ledger had wrong type: " + str(type(app["ledger_creation_source"].last_ledger)))
+                f.write(app["ledger_creation_source"].last_ledger)
+                logger.info("Writing ledger to file: " + str(app["ledger_creation_source"].last_ledger))
+    except Exception as e:
+        logger.error("Failed to write to file: " + str(e))
+
+    sys.exit(0)
 
 
 async def start_template_flows(
@@ -81,7 +115,8 @@ async def start_template_flows(
 ):
     if fluent_tag not in endpoints:
         raise RuntimeError(
-            "[ExtractXRPLTransactions] missing xrpl endpoint - did you forget to specify the fluent tag?")
+            "[ExtractXRPLTransactions] Could not recognize fluent tag - did you forget to specify the fluent tag? " +
+            str(fluent_tag))
 
     xrpl_endpoint = endpoints[fluent_tag]
     wss_endpoint = wss_endpoints[fluent_tag]
@@ -100,13 +135,35 @@ async def start_template_flows(
     app["ledger_record_source_sink"] = ledger_record_source_sink
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
+    starting_index = None
 
+    try:
+        with open(app.ledger_index_file_path, "r") as f:
+            logger.info("Reading ledger index from file")
+            for line in f:
+                starting_index = int(line)
+    except FileNotFoundError:
+        logger.info("No ledger index file present")
+
+    if starting_index is not None:
+        logger.info("Starting index: " + str(starting_index))
+
+        current_index = await ledger_creation_source.async_queue.get()
+        i = starting_index
+
+        while i <= current_index:
+            logger.info("Appending index to queue: " + str(i))
+            ledger_creation_source.async_queue.put_nowait(i)
+            i += 1
+
+    ledger_index_processor = LedgerIndexProcessor(index_file_path=ledger_index_file_path)
     # create 10 tasks of the same to increase throughput
     for i in range(10):
         ledger_details_pc_map_builder = ProcessCollectorsMapBuilder()
         pc_map = ledger_details_pc_map_builder.with_processor(
             XRPLFetchLedgerDetailsProcessor(
                 rpc_client=async_rpc_client,
+                ledger_index_processor=ledger_index_processor,
             )
         ).add_data_sink_output_collector(
             data_sink=ledger_record_source_sink,
@@ -199,12 +256,22 @@ def parse_arguments() -> argparse.Namespace:
         type=int,
         default=25225,
     )
+    arg_parser.add_argument(
+        "-c",
+        "--config",
+        help="specify the configuration file",
+        type=str,
+        default="/tmp/config.yml",
+    )
 
     return arg_parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_arguments()
+    config = load_from_file(args.config)
+    fluent_tag = config["network"] if "network" in config and config["network"] is not None else args.fluent_tag
+    ledger_index_file_path = config["ledger_index_path"] if "ledger_index_path" in config else "/app/persistent_data/ledgers.txt"
 
     app = web.Application()
     app.add_routes([
@@ -212,7 +279,15 @@ if __name__ == "__main__":
         web.get('/{name}', handle),
         web.get('/health', health_check),
     ])
+    app.ledger_index_file_path = ledger_index_file_path
 
-    app.on_startup.append(partial(start_template_flows, fluent_tag=args.fluent_tag))
+    app.on_startup.append(partial(start_template_flows, fluent_tag=fluent_tag))
     app.on_cleanup.append(stop_template_flows)
-    web.run_app(app)
+    app.on_shutdown.append(stop_template_flows)
+
+    loop = asyncio.get_event_loop()
+    loop.add_signal_handler(signal.SIGINT, on_exit)
+    loop.add_signal_handler(signal.SIGTERM, on_exit)
+
+    web.run_app(app, loop=loop)
+

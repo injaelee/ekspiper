@@ -1,13 +1,19 @@
 FROM python:3.9
 
 ARG NETWORK
+ARG LEDGER_INDEX_PATH
 
-WORKDIR /pipeline/
+WORKDIR /app
 
-COPY requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-ADD ekspiper ./ekspiper
-COPY server_container.py ./
+COPY ekspiper ./ekspiper
+COPY server_container.py .
+RUN echo "network: $NETWORK" > /app/config.yml
+RUN echo "ledger_index_path: $LEDGER_INDEX_PATH" >> /app/config.yml
 
-CMD python server_container.py -ft $NETWORK
+ENTRYPOINT ["python", "server_container.py", "-c", "/app/config.yml"]
+
+#ENTRYPOINT python server_container.py -ft $NETWORK
+
