@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "xrpl-data-pipeline.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "xrpl-data-pipeline.selectorLabels" . | nindent 6 }}
@@ -21,10 +19,9 @@ spec:
         {{- include "xrpl-data-pipeline.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "xrpl-data-pipeline.serviceAccountName" . }}
-      {{- if .Values.imagePullSecret }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-      - name: {{ .Values.imagePullSecret }}
-      {{- else }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
