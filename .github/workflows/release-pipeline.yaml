@@ -54,7 +54,7 @@ jobs:
 
   deploy-prod:
     name: 'Deploy to Prod'
-    needs: [ pre-build, deploy-stg ]
+    needs: [ pre-build, build-and-publish]
     uses: ./.github/workflows/deploy-via-gitops.yaml
     secrets: inherit
     with:
