@@ -76,7 +76,7 @@ async def websocket_supervisor(ledger_creation_source):
 async def start_template_flows(
         app: web_app.Application,
         fluent_tag: str = None,
-        fluent_host: str = "fluent-bit",
+        fluent_host: str = "localhost",
         fluent_port: int = 25225,
 ):
     if fluent_tag not in endpoints:
