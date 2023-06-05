@@ -96,10 +96,10 @@ def on_exit():
     logger.info("Exiting...")
     try:
         if app["ledger_creation_source"].last_ledger is not None:
-            with open(app.ledger_index_file_path, "a+") as f:
-                if type(app["ledger_creation_source"].last_ledger) is not str:
+            with open(app.ledger_index_file_path, "w") as f:
+                if type(app["ledger_creation_source"].last_ledger) is not int:
                     raise Exception("ledger had wrong type: " + str(type(app["ledger_creation_source"].last_ledger)))
-                f.write(app["ledger_creation_source"].last_ledger)
+                f.write(str(app["ledger_creation_source"].last_ledger) + "\n")
                 logger.info("Writing ledger to file: " + str(app["ledger_creation_source"].last_ledger))
     except Exception as e:
         logger.error("Failed to write to file: " + str(e))

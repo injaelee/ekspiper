@@ -74,18 +74,17 @@ class STDOUTCollector(OutputCollector):
     async def acollect_output(self,
                               entry: Dict[str, Any]
                               ):
-        pass
-        # if self.is_simplified:
-        #     if type(entry) == dict:
-        #         print("[STDOUTCollector::%s] Received entry keys: %s" % (
-        #             self.tag_name,
-        #             entry.keys(),
-        #         ))
-        # else:
-        #     print("[STDOUTCollector::%s] %s" % (
-        #         self.tag_name,
-        #         entry,
-        #     ))
+        if self.is_simplified:
+            if type(entry) == dict:
+                print("[STDOUTCollector::%s] Received entry keys: %s" % (
+                    self.tag_name,
+                    entry.keys(),
+                ))
+        else:
+            print("[STDOUTCollector::%s] %s" % (
+                self.tag_name,
+                entry,
+            ))
 
 
 class MetricCollector(OutputCollector):

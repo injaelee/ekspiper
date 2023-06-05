@@ -22,7 +22,7 @@ services:
     volumes:
       - ledgers:/persistent_data/
     depends_on:
-      - fluent-bit
+      - localhost
     ports:
       - "23223:23223"
 

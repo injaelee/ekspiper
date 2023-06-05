@@ -17,13 +17,13 @@ class LedgerIndexProcessor:
 
     def process(self, ledger_index: int):
         if self.index_file_path is not None:
-            logger.info("ledger_index: " + str(ledger_index))
-            logger.info("last_ledger: " + str(self.last_ledger))
+            logger.info("[FetchTransactions] ledger_index: " + str(ledger_index))
+            logger.info("[FetchTransactions] last_ledger: " + str(self.last_ledger))
 
             if self.last_ledger is None or ledger_index - self.last_ledger >= 100:
-                with open(self.index_file_path, "a+") as f:
+                with open(self.index_file_path, "w") as f:
                     logger.info("[FetchTransactions] Writing index: " + str(ledger_index) + " to file: " + self.index_file_path)
-                    f.write(str(ledger_index))
+                    f.write(str(ledger_index) + "\n")
                     self.last_ledger = ledger_index
 
 
