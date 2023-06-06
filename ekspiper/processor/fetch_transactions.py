@@ -6,6 +6,7 @@ import xrpl.models
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 
 from ekspiper.processor.base import EntryProcessor
+from ekspiper.util.state_helper import save_ledger_to_s3
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,9 @@ class LedgerIndexProcessor:
             logger.info("[FetchTransactions] last_ledger: " + str(self.last_ledger))
 
             if self.last_ledger is None or ledger_index - self.last_ledger >= 100:
-                with open(self.index_file_path, "w") as f:
-                    logger.info("[FetchTransactions] Writing index: " + str(ledger_index) + " to file: " + self.index_file_path)
-                    f.write(str(ledger_index) + "\n")
+                if save_ledger_to_s3(ledger_index):
                     self.last_ledger = ledger_index
-
+                    
 
 class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 

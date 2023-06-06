@@ -49,3 +49,4 @@ websockets==10.3
 xrpl-py==1.7.0
 yarl==1.8.2
 PyYAML==6.0
+boto3==1.26.147

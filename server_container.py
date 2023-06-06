@@ -5,7 +5,6 @@ import signal
 import sys
 from functools import partial
 
-import yaml
 from aiohttp import web, web_app
 from fluent.asyncsender import FluentSender
 from xrpl.asyncio.clients import AsyncJsonRpcClient
@@ -27,6 +26,7 @@ from ekspiper.processor.fetch_transactions import (
 )
 from ekspiper.schema.xrp import XRPLTransactionSchema, XRPLLedgerSchema
 from ekspiper.util.endpoints import endpoints, wss_endpoints
+from ekspiper.util.state_helper import *
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -42,18 +42,21 @@ async def health_check(request):
     return web.Response(text="healthy")
 
 
-def load_from_file(
-        yml_path: str,
-):
-    logger.info("[ServerContainer] loading config from path: " + yml_path)
-    try:
-        with open(yml_path, mode="rt", encoding="utf-8") as file:
-            yml_config = yaml.safe_load(file)
-            logger.info("[ServerContainer] config file: " + str(yml_config))
-    except Exception as e:
-        logger.info("[ServerContainer] Wasn't able to load config file: " + str(e))
+def on_exit():
+    save_ledger_to_s3(app["ledger_creation_source"].last_ledger)
+    logger.info("[ServerContainer] Exiting...")
+    sys.exit(0)
 
-    return yml_config
+
+async def websocket_supervisor(ledger_creation_source):
+    while True:
+        try:
+            logger.warning("Attempting to connect to server...")
+            await ledger_creation_source.start()
+        except Exception as e:
+            logger.warning("There was an error starting the ledger creation source: " + str(e))
+
+        await asyncio.sleep(5)
 
 
 async def stop_template_flows(
@@ -79,32 +82,6 @@ async def stop_template_flows(
     await app["flow_txn_record"]
     await app["flow_ledger_record"]
     await app["flow_ledger_to_txns_brk"]
-
-
-async def websocket_supervisor(ledger_creation_source):
-    while True:
-        try:
-            logger.warning("Attempting to connect to server...")
-            await ledger_creation_source.start()
-        except Exception as e:
-            logger.warning("There was an error starting the ledger creation source: " + str(e))
-
-        await asyncio.sleep(5)
-
-
-def on_exit():
-    logger.info("Exiting...")
-    try:
-        if app["ledger_creation_source"].last_ledger is not None:
-            with open(app.ledger_index_file_path, "w") as f:
-                if type(app["ledger_creation_source"].last_ledger) is not int:
-                    raise Exception("ledger had wrong type: " + str(type(app["ledger_creation_source"].last_ledger)))
-                f.write(str(app["ledger_creation_source"].last_ledger) + "\n")
-                logger.info("Writing ledger to file: " + str(app["ledger_creation_source"].last_ledger))
-    except Exception as e:
-        logger.error("Failed to write to file: " + str(e))
-
-    sys.exit(0)
 
 
 async def start_template_flows(
@@ -135,15 +112,8 @@ async def start_template_flows(
     app["ledger_record_source_sink"] = ledger_record_source_sink
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
-    starting_index = None
-
-    try:
-        with open(app.ledger_index_file_path, "r") as f:
-            logger.info("Reading ledger index from file")
-            for line in f:
-                starting_index = int(line)
-    except FileNotFoundError:
-        logger.info("No ledger index file present")
+    state = load_from_s3()
+    starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
 
     if starting_index is not None:
         logger.info("Starting index: " + str(starting_index))
