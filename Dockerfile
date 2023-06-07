@@ -1,7 +1,7 @@
 FROM python:3.9
 
 ARG NETWORK
-ARG LEDGER_INDEX_PATH
+ARG STATE_PATH
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ekspiper ./ekspiper
 COPY server_container.py .
 RUN echo "network: $NETWORK" > /app/config.yml
-RUN echo "ledger_index_path: $LEDGER_INDEX_PATH" >> /app/config.yml
+RUN echo "state_path: $STATE_PATH" >> /app/config.yml
 
 ENTRYPOINT ["python", "server_container.py", "-c", "/app/config.yml"]
 
