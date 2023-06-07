@@ -46,7 +46,7 @@ class LedgerCreationDataSource(DataSource):
             try:
                 timed_message_iterator = AsyncTimedIterable(client, 15)
                 async for message in timed_message_iterator:
-                    logger.info("Received message: " + str(message))
+                    logger.info("[LedgerCreationDataSource] Received message: " + str(message))
                     self.last_ledger = int(message.get(
                         "result", {}).get("ledger_index") or message.get("ledger_index"))
 
@@ -131,7 +131,7 @@ class LedgerObjectDataSource(DataSource):
 
             # check whether the message was successful and retry
             if not response.is_successful():
-                logging.error("[FAILED] response: %s", response)
+                logging.error("[LedgerObjectDataSource] FAILED response: %s", response)
                 continue
 
             result = response.result

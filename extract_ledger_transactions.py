@@ -116,7 +116,7 @@ async def amain_file(
     if schema == "object":
         schema_to_use = XRPLObjectSchema.SCHEMA
 
-    logger.warning("Using schema: ", schema)
+    logger.warning("[ExtractLedgerTransactions] Using schema: ", schema)
 
     txn_rec_pc_map_builder = ProcessCollectorsMapBuilder()
     pc_map = txn_rec_pc_map_builder.with_processor(

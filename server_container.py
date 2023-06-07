@@ -51,10 +51,10 @@ def on_exit():
 async def websocket_supervisor(ledger_creation_source):
     while True:
         try:
-            logger.warning("Attempting to connect to server...")
+            logger.info("[ServerContainer] Attempting to connect to server...")
             await ledger_creation_source.start()
         except Exception as e:
-            logger.warning("There was an error starting the ledger creation source: " + str(e))
+            logger.info("[ServerContainer] There was an error starting the ledger creation source: " + str(e))
 
         await asyncio.sleep(5)
 
@@ -62,7 +62,7 @@ async def websocket_supervisor(ledger_creation_source):
 async def stop_template_flows(
         app: web_app.Application,
 ):
-    print("Stopping the web application....")
+    print("[ServerContainer] Stopping the web application....")
     on_exit()
     # theoretically, if we stop the sources, flow should
     # drain out and exit gracefully
@@ -97,9 +97,9 @@ async def start_template_flows(
 
     xrpl_endpoint = endpoints[fluent_tag]
     wss_endpoint = wss_endpoints[fluent_tag]
-    logger.info("[ExtractXRPLTransactions] using fluent tag: " + fluent_tag)
-    logger.info("[ExtractXRPLTransactions] using endpoint: " + xrpl_endpoint)
-    logger.info("[ExtractXRPLTransactions] using WSS endpoint: " + wss_endpoint)
+    logger.info("[ServerContainer] using fluent tag: " + fluent_tag)
+    logger.info("[ServerContainer] using endpoint: " + xrpl_endpoint)
+    logger.info("[ServerContainer] using WSS endpoint: " + wss_endpoint)
 
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
     fluent_sender = FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port)
@@ -116,13 +116,13 @@ async def start_template_flows(
     starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
 
     if starting_index is not None:
-        logger.info("Starting index: " + str(starting_index))
+        logger.info("[ServerContainer] Starting index: " + str(starting_index))
 
         current_index = await ledger_creation_source.async_queue.get()
         i = starting_index
 
         while i <= current_index:
-            logger.info("Appending index to queue: " + str(i))
+            logger.info("[ServerContainer] Appending index to queue: " + str(i))
             ledger_creation_source.async_queue.put_nowait(i)
             i += 1
 
@@ -196,7 +196,7 @@ async def start_template_flows(
         fluent_sender=FluentSender(fluent_tag + ".ledgers", host=fluent_host, port=fluent_port),
     ).build()
     flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
-    logger.info("done building, running...")
+    logger.info("[ServerContainer] Done building, running...")
     app["flow_ledger_record"] = asyncio.create_task(flow_ledger_record.aexecute(
         message_iterator=formatted_ledger_source_sink,
     ))
