@@ -16,9 +16,6 @@ services:
     build:
       context: .
       network: host
-      args:
-        - NETWORK=$NETWORK
-        - LEDGER_INDEX_PATH=/persistent_data/ledgers.txt
     volumes:
       - ledgers:/persistent_data/
     depends_on:

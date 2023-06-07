@@ -28,8 +28,6 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.releaseImage }}"
-          command: ["python"]
-          args: ["server_container.py", "-ft", "{{ .Values.xrplNetwork }}"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           imagePullPolicy: {{ .Values.releaseImagePullPolicy }}
@@ -65,6 +63,9 @@ spec:
           volumeMounts:
             - name: fluent-bit-secrets-and-config
               mountPath: /fluent-bit/etc/
+            - name: app-config
+              mountPath: /app/config.yml
+              subPath: config.yml
       volumes:
         - name: fluent-bit-secrets-and-config
           projected:
@@ -73,6 +74,9 @@ spec:
                   name: fluent-bit-sa-key
               - configMap:
                   name: fluent-bit-config
+        - name: app-config
+          configMap:
+            name: app-config
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

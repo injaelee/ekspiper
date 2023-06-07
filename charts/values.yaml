@@ -22,7 +22,8 @@ resources: {}
 
 port: 8080
 
-xrplNetwork: debug
+xrplNetwork: testnet
+statePath: /app_data/testnet/state
 
 fluent:
   releaseImage: fluent/fluent-bit:2.0.8
