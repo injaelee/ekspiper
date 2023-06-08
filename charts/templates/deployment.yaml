@@ -65,7 +65,7 @@ spec:
             - name: fluent-bit-secrets-and-config
               mountPath: /fluent-bit/etc/
             - name: app-config
-              mountPath: /config/config.yml
+              mountPath: /config/
       volumes:
         - name: fluent-bit-secrets-and-config
           projected:
