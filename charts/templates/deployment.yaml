@@ -47,7 +47,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: app-config
-              mountPath: /app/config,yml
+              mountPath: /app/config.yml
               subPath: config.yml
         - name: fluent-bit
           image: "{{ .Values.fluent.releaseImage }}"
