@@ -9,7 +9,8 @@ COPY ekspiper ./ekspiper
 COPY server_container.py .
 COPY config.yml .
 
-ENTRYPOINT ["python", "server_container.py", "-c", "/app/config.yml"]
+ENTRYPOINT ["python", "server_container.py"]
+CMD ["-c", "/app/config.yml"]
 
 #ENTRYPOINT python server_container.py -ft $NETWORK
 

@@ -28,6 +28,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.releaseImage }}"
+          args: ["-c", "/config/config.yml"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           imagePullPolicy: {{ .Values.releaseImagePullPolicy }}
@@ -64,8 +65,7 @@ spec:
             - name: fluent-bit-secrets-and-config
               mountPath: /fluent-bit/etc/
             - name: app-config
-              mountPath: /app/config.yml
-              subPath: config.yml
+              mountPath: /config/config.yml
       volumes:
         - name: fluent-bit-secrets-and-config
           projected:
