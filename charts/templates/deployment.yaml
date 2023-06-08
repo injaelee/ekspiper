@@ -28,7 +28,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.releaseImage }}"
-          args: ["-c", "/config/config.yml"]
+          # args: ["-c", "/config/config.yml"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           imagePullPolicy: {{ .Values.releaseImagePullPolicy }}
