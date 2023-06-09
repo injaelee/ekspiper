@@ -15,9 +15,11 @@ services:
   server_container:
     build:
       context: .
+      dockerfile: ./Dockerfile.dev
       network: host
-    volumes:
-      - ledgers:/persistent_data/
+      args:
+        - NETWORK=mainnet
+        - STATE_PATH=/data/mainnet/state
     depends_on:
       - localhost
     ports:

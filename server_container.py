@@ -43,7 +43,7 @@ async def health_check(request):
 
 
 def on_exit():
-    save_ledger_to_s3(app["ledger_creation_source"].last_ledger)
+    save_ledger_to_s3(app["ledger_creation_source"].last_ledger, path=app.ledger_index_file_path)
     logger.info("[ServerContainer] Exiting...")
     sys.exit(0)
 
@@ -112,7 +112,7 @@ async def start_template_flows(
     app["ledger_record_source_sink"] = ledger_record_source_sink
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
-    state = load_from_s3()
+    state = load_from_s3(path=app.ledger_index_file_path)
     starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
 
     if starting_index is not None:
@@ -126,7 +126,7 @@ async def start_template_flows(
             ledger_creation_source.async_queue.put_nowait(i)
             i += 1
 
-    ledger_index_processor = LedgerIndexProcessor(index_file_path=ledger_index_file_path)
+    ledger_index_processor = LedgerIndexProcessor(index_file_path=app.ledger_index_file_path)
     # create 10 tasks of the same to increase throughput
     for i in range(10):
         ledger_details_pc_map_builder = ProcessCollectorsMapBuilder()
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     args = parse_arguments()
     config = load_from_file(args.config)
     fluent_tag = config["network"] if "network" in config and config["network"] is not None else args.fluent_tag
-    ledger_index_file_path = config["ledger_index_path"] if "ledger_index_path" in config else "/app/persistent_data/ledgers.txt"
+    ledger_index_file_path = config["ledger_index_path"] if "ledger_index_path" in config else "/data/{}/state".format(fluent_tag)
 
     app = web.Application()
     app.add_routes([

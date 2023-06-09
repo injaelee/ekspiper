@@ -22,9 +22,9 @@ class LedgerIndexProcessor:
             logger.info("[FetchTransactions] last_ledger: " + str(self.last_ledger))
 
             if self.last_ledger is None or ledger_index - self.last_ledger >= 100:
-                if save_ledger_to_s3(ledger_index):
+                if save_ledger_to_s3(ledger_index, path=self.index_file_path):
                     self.last_ledger = ledger_index
-                    
+
 
 class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
