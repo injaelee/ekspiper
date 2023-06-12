@@ -30,7 +30,7 @@ class FileDataSource(DataSource):
                         await asyncio.sleep(0)  # force yielding control
                     except Exception as e:
                         logger.exception(e)
-                        logger.error("Couldnt cast line to int ", line)
+                        logger.error("[FileDataSource] Couldnt cast line to int ", line)
 
     def stop(self):
         self.is_stop = True

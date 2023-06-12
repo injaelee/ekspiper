@@ -1,13 +1,13 @@
 FROM python:3.9
 
-ARG NETWORK
+WORKDIR /app
 
-WORKDIR /pipeline/
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt
+COPY ekspiper ./ekspiper
+COPY server_container.py .
+COPY config.yml .
 
-ADD ekspiper ./ekspiper
-COPY server_container.py ./
-
-CMD python server_container.py -ft $NETWORK
+ENTRYPOINT ["python", "server_container.py"]
+CMD ["-c", "/app/config.yml"]

@@ -32,8 +32,9 @@ class LedgerCreationDataSource(DataSource):
         self.client = None
         self.done_callback = done_callback
         self.stream_type = stream_type
+        self.last_ledger = None
 
-    async def _start(self):
+    async def start(self):
         ledger_update_sub_req = Subscribe(streams=[self.stream_type])
 
         async with AsyncWebsocketClient(self.wss_url) as client:
@@ -45,7 +46,11 @@ class LedgerCreationDataSource(DataSource):
             try:
                 timed_message_iterator = AsyncTimedIterable(client, 15)
                 async for message in timed_message_iterator:
-                    self.async_queue.put_nowait(message)
+                    logger.info("[LedgerCreationDataSource] Received message: " + str(message))
+                    self.last_ledger = int(message.get(
+                        "result", {}).get("ledger_index") or message.get("ledger_index"))
+
+                    self.async_queue.put_nowait(self.last_ledger)
             except asyncio.TimeoutError as e:
                 logger.error(
                     "[LedgerCreationDataSource] Haven't received a message in 15s, closing connection : " + str(e))
@@ -126,7 +131,7 @@ class LedgerObjectDataSource(DataSource):
 
             # check whether the message was successful and retry
             if not response.is_successful():
-                logging.error("[FAILED] response: %s", response)
+                logging.error("[LedgerObjectDataSource] FAILED response: %s", response)
                 continue
 
             result = response.result

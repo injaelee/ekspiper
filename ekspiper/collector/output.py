@@ -32,9 +32,9 @@ class BigQueryCollector(OutputCollector):
         errors = bigquery.Client().insert_rows_json(table_id, [entry], row_ids=[None] * len([entry]))
 
         if not errors:
-            logger.info("New rows have been added.")
+            logger.info("[BigQueryCollector] New rows have been added.")
         else:
-            logger.warning("Encountered errors while inserting rows: {}".format(errors))
+            logger.warning("[BigQueryCollector] Encountered errors while inserting rows: {}".format(errors))
 
 
 class FluentCollector(OutputCollector):

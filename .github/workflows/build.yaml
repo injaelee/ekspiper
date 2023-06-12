@@ -28,9 +28,7 @@ jobs:
       - name: Build Docker image
         run: |
           echo "Building Docker image ${{ inputs.docker_image_location }}"
-          docker build -t "${{ inputs.docker_image_location }}" \
-            --build-arg GITHUB_SHA="${{ github.sha }}" \
-            --build-arg GITHUB_REF="${{ github.ref }}" .
+          docker build -t "${{ inputs.docker_image_location }}" .
       - name: Publish to GCR
         run: |
           echo "Pushing Docker image ${{ inputs.docker_image_location }}"

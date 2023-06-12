@@ -21,7 +21,7 @@ class LedgerCreationDataSourceTest(unittest.IsolatedAsyncioTestCase):
         data_source = LedgerCreationDataSource()
         mock_client.__aiter__.return_value = [1, 2, 3, 4, 5]
 
-        await data_source._start()
+        await data_source.start()
 
         while data_source.async_queue.qsize() < 5:
             print(data_source.async_queue.qsize())

@@ -6,19 +6,38 @@ import xrpl.models
 from xrpl.asyncio.clients import AsyncJsonRpcClient
 
 from ekspiper.processor.base import EntryProcessor
+from ekspiper.util.state_helper import save_ledger_to_s3
 
 logger = logging.getLogger(__name__)
+
+
+class LedgerIndexProcessor:
+    def __init__(self, index_file_path: str = None):
+        self.last_ledger = None
+        self.index_file_path = index_file_path
+
+    def process(self, ledger_index: int):
+        if self.index_file_path is not None:
+            logger.info("[FetchTransactions] ledger_index: " + str(ledger_index))
+            logger.info("[FetchTransactions] last_ledger: " + str(self.last_ledger))
+
+            if self.last_ledger is None or ledger_index - self.last_ledger >= 100:
+                if save_ledger_to_s3(ledger_index, path=self.index_file_path):
+                    self.last_ledger = ledger_index
 
 
 class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
     def __init__(self,
                  rpc_client: AsyncJsonRpcClient,
+                 ledger_index_processor: LedgerIndexProcessor,
                  ):
         # more than efficient for a request-response query pattern
         #  - server is not pushing any information; must have a request
         #  - make sure HTTP keep-alive to avoid reconnect/establishment
         self.rpc_client = rpc_client
+        self.last_ledger = None
+        self.ledger_index_processor = ledger_index_processor
 
     async def aprocess(self,
                        entry: Union[int, dict],  # ledger index
@@ -32,6 +51,8 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
                     type(entry),
                     entry,
                 ))
+
+        ledger_index = None
 
         # TODO: input extraction should be done elsewhere; not its responsibility
         if type(entry) == int:
@@ -51,6 +72,8 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
             ledger_index,
         )
 
+        self.ledger_index_processor.process(ledger_index)
+
         # build the request
         req = xrpl.models.Ledger(
             ledger_index=ledger_index,
@@ -61,8 +84,8 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
         # check the response success
         if not response.is_successful():
-            logger.error("[XRPLFetchLedgerDetailsProcessor] failed to fetch request, error: ", str(response))
-            raise ValueError("Error fetching transactions for ledger '%d'" % ledger_index)
+            logger.error("[XRPLFetchLedgerDetailsProcessor] failed to fetch request, error: " + str(response))
+            raise ValueError("Error fetching transactions for ledger :" + str(ledger_index))
 
         message = response.result
         """

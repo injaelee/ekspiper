@@ -38,6 +38,8 @@ logger.addHandler(queue_handler)
 listener = QueueListener(log_queue)
 listener.start()
 
+ledger_index = None
+
 """
 # TODO's
 - [ ] Optionally specify specific ledger index
@@ -184,7 +186,7 @@ async def amain_ledger(
     # Flow: Obtain Ledger Details
     #
     flow_ledger_detail_tasks = []
-    partition_size = 100
+    partition_size = 10
     for i in range(partition_size):
         async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
 

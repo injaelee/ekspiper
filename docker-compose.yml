@@ -12,21 +12,18 @@ services:
       # this file is not provided as part of the repository
       - ~/sa-private-key.json:/fluent-bit/etc/credentials.json
 
-  #    healthcheck:
-  #      test: curl -s http://127.0.0.1:2020/api/v1/health
-  #      interval: 3s
-  #      retries: 2
-  #      start_period: 3s
-  #      timeout: 10s
-
   server_container:
     build:
       context: .
+      dockerfile: ./Dockerfile.dev
       network: host
-    environment:
-      - NETWORK=$NETWORK
+      args:
+        - NETWORK=mainnet
+        - STATE_PATH=/data/mainnet/state
     depends_on:
-      - fluent-bit
+      - localhost
     ports:
       - "23223:23223"
 
+volumes:
+  ledgers:
