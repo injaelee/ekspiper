@@ -30,7 +30,7 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
 
     def __init__(self,
                  rpc_client: AsyncJsonRpcClient,
-                 ledger_index_processor: LedgerIndexProcessor,
+                 ledger_index_processor: LedgerIndexProcessor = None,
                  ):
         # more than efficient for a request-response query pattern
         #  - server is not pushing any information; must have a request
@@ -72,7 +72,8 @@ class XRPLFetchLedgerDetailsProcessor(EntryProcessor):
             ledger_index,
         )
 
-        self.ledger_index_processor.process(ledger_index)
+        if self.ledger_index_processor is not None:
+            self.ledger_index_processor.process(ledger_index)
 
         # build the request
         req = xrpl.models.Ledger(
