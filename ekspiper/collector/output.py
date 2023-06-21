@@ -6,9 +6,13 @@ from fluent.asyncsender import FluentSender
 from google.cloud import bigquery
 
 from ekspiper.connect.data import DataSink
+from ekspiper.util.state_helper import *
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+import pyarrow.parquet as pq
+import pandas as pd
 
 
 class OutputCollector:
@@ -16,6 +20,17 @@ class OutputCollector:
                               entry: Any,
                               ):
         return
+
+
+class ParquetCollector(OutputCollector):
+    def __init__(self, path: str):
+        self.path = path
+
+    async def acollect_output(self,
+                              entry: Dict[str, Any],
+                              ):
+        df = pd.DataFrame.from_dict(entry)
+        df.to_parquet('data.parquet')
 
 
 class BigQueryCollector(OutputCollector):
@@ -69,18 +84,12 @@ class STDOUTCollector(OutputCollector):
                  is_simplified: bool = False,
                  ):
         self.tag_name = tag_name
-        self.is_simplified = is_simplified
+        self.is_simplified = False
 
     async def acollect_output(self,
                               entry: Dict[str, Any]
                               ):
-        if self.is_simplified:
-            if type(entry) == dict:
-                print("[STDOUTCollector::%s] Received entry keys: %s" % (
-                    self.tag_name,
-                    entry.keys(),
-                ))
-        else:
+        if not self.is_simplified:
             print("[STDOUTCollector::%s] %s" % (
                 self.tag_name,
                 entry,

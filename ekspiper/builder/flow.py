@@ -62,6 +62,9 @@ class ProcessCollectorsMapBuilder:
         ))
         return self
 
+    def add_parquet_output_collector(self):
+        self.output_collectors.append()
+
     def add_bigquery_output_collector(self, project: str, dataset: str, table: str) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(BigQueryCollector(project=project, dataset=dataset, table=table))
         return self

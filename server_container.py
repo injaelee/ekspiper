@@ -102,7 +102,6 @@ async def start_template_flows(
     logger.info("[ServerContainer] using WSS endpoint: " + wss_endpoint)
 
     async_rpc_client = AsyncJsonRpcClient(xrpl_endpoint)
-    fluent_sender = FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port)
     ledger_creation_source = LedgerCreationDataSource(wss_url=wss_endpoint)
     ledger_record_source_sink = QueueSourceSink(name="ledger_record_source_sink")
     txn_record_source_sink = QueueSourceSink(name="txn_record_source_sink")
@@ -177,7 +176,7 @@ async def start_template_flows(
         tag_name=fluent_tag,
         is_simplified=True
     ).add_fluent_output_collector(
-        fluent_sender=fluent_sender,
+        fluent_sender=FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port),
     ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_txn_record"] = asyncio.create_task(flow_txn_record.aexecute(
