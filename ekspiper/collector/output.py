@@ -1,18 +1,17 @@
 import asyncio
 import logging
-from typing import Any, Dict
+import pyarrow.parquet as pq
+import pandas as pd
+import pyarrow as pa
 
+from typing import Any, Dict
 from fluent.asyncsender import FluentSender
 from google.cloud import bigquery
-
 from ekspiper.connect.data import DataSink
 from ekspiper.util.state_helper import *
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-import pyarrow.parquet as pq
-import pandas as pd
 
 
 class OutputCollector:
@@ -23,12 +22,15 @@ class OutputCollector:
 
 
 class ParquetCollector(OutputCollector):
-    def __init__(self, path: str):
+    def __init__(self, path: str, schema: {}):
         self.path = path
+        self.schema = pa.schema(schema)
+        self.df = pd.DataFrame(self.schema)
 
     async def acollect_output(self,
                               entry: Dict[str, Any],
                               ):
+        self.df.
         df = pd.DataFrame.from_dict(entry)
         df.to_parquet('data.parquet')
 

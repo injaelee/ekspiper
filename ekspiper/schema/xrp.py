@@ -744,3 +744,10 @@ class XRPLObjectSchema:
         "_Sequence": {int},
         "index": {str},
     }
+
+
+schema_map = {
+    "ledger": XRPLLedgerSchema.SCHEMA,
+    "transaction": XRPLTransactionSchema.SCHEMA,
+    "object": XRPLObjectSchema.SCHEMA,
+}
