@@ -90,7 +90,7 @@ class ParquetCollectorTest(unittest.TestCase):
         dataframe = pd.concat([dataframe, pd.DataFrame([t_4])], ignore_index=True)
         # print(dataframe)
         table = pa.Table.from_pandas(dataframe, schema=parquet_schema)
-        writer = pq.ParquetWriter(f"s3://caspian-ripplex-dev/data.parquet", table.schema, compression='snappy')
+        writer = pq.ParquetWriter(f"s3://caspian-ripplex-dev/data/mainnet/data.parquet", table.schema, compression='snappy')
         # pa.concat_tables([table, pa.Table.from_pydict(t_2)])
         try:
             # pq.write_table(table, "s3://caspian-ripplex-dev/data.parquet", compression="GZIP")

@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import signal
 import sys
 from functools import partial
@@ -13,6 +14,7 @@ from ekspiper.builder.flow import (
     ProcessCollectorsMapBuilder,
     TemplateFlowBuilder,
 )
+from ekspiper.collector.output import CaspianCollector
 from ekspiper.connect.queue import QueueSourceSink
 from ekspiper.connect.xrpledger import LedgerCreationDataSource
 from ekspiper.processor.etl import (
@@ -111,6 +113,7 @@ async def start_template_flows(
     app["ledger_record_source_sink"] = ledger_record_source_sink
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
+    caspian_bronze_key = os.environ['CASPIAN_BRONZE_KEY']
     state = load_from_s3(path=app.ledger_index_file_path)
     starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
 
@@ -177,6 +180,8 @@ async def start_template_flows(
         is_simplified=True
     ).add_fluent_output_collector(
         fluent_sender=FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port),
+    ).add_caspian_collector(
+        collector=CaspianCollector(key=caspian_bronze_key)
     ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_txn_record"] = asyncio.create_task(flow_txn_record.aexecute(
@@ -193,6 +198,8 @@ async def start_template_flows(
         is_simplified=True
     ).add_fluent_output_collector(
         fluent_sender=FluentSender(fluent_tag + ".ledgers", host=fluent_host, port=fluent_port),
+    ).add_caspian_collector(
+        collector=CaspianCollector(key=caspian_bronze_key)
     ).build()
     flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
     logger.info("[ServerContainer] Done building, running...")

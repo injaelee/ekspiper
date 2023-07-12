@@ -1,8 +1,11 @@
 import asyncio
 import logging
+import time
+
 import pyarrow.parquet as pq
 import pandas as pd
 import pyarrow as pa
+import requests
 
 from typing import Any, Dict
 from fluent.asyncsender import FluentSender
@@ -21,18 +24,39 @@ class OutputCollector:
         return
 
 
-class ParquetCollector(OutputCollector):
-    def __init__(self, path: str, schema: {}):
-        self.path = path
-        self.schema = pa.schema(schema)
-        self.df = pd.DataFrame(self.schema)
+class CaspianCollector(OutputCollector):
+    def __init__(self,
+                 key: str = None,
+                 url: str = 'https://9num4exin3.execute-api.us-east-1.amazonaws.com/caspian/data/publish',
+                 bronze_table: str = 'ripplex',
+                 silver_table: str = 'mainnet-testing',
+                 schema_type: str = 'mainnet',
+                 schema_version: int = 1
+                 ):
+        self.key = key
+        self.url = url
+        self.bronze_table = bronze_table
+        self.silver_table = silver_table
+        self.schema_type = schema_type
+        self.schema_version = schema_version
 
     async def acollect_output(self,
                               entry: Dict[str, Any],
                               ):
-        self.df.
-        df = pd.DataFrame.from_dict(entry)
-        df.to_parquet('data.parquet')
+        headers = {'x-api-key': self.key}
+        data = {"producerName": self.bronze_table, "entityName": self.silver_table, "schemaType": self.schema_type,
+                "schemaVersion": self.schema_version, "timestamp": time.time(), "data": [entry]}
+        # Convert the data to JSON format
+        json_data = json.dumps(data)
+
+        # Make the API request
+        response = requests.post(self.url, headers=headers, data=json_data)
+
+        # Print the response status code and content
+        print(f'[CaspianCollector] response status code {response.status_code}')
+        print(f'[CaspianCollector] response content: {response.content}')
+
+        return response
 
 
 class BigQueryCollector(OutputCollector):
