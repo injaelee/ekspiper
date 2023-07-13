@@ -113,7 +113,7 @@ async def start_template_flows(
     app["ledger_record_source_sink"] = ledger_record_source_sink
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
-    caspian_bronze_key = os.environ['CASPIAN_BRONZE_KEY']
+    caspian_bronze_key = os.environ['caspian_bronze_key']
     state = load_from_s3(path=app.ledger_index_file_path)
     starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
 

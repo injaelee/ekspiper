@@ -65,6 +65,8 @@ class ProcessCollectorsMapBuilder:
     def add_caspian_collector(self, collector: CaspianCollector):
         self.output_collectors.append(collector)
 
+        return self
+
     def add_bigquery_output_collector(self, project: str, dataset: str, table: str) -> ProcessCollectorsMapBuilder:
         self.output_collectors.append(BigQueryCollector(project=project, dataset=dataset, table=table))
         return self

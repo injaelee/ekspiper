@@ -13,6 +13,7 @@ class CaspianCollectorTest(unittest.IsolatedAsyncioTestCase):
         t_3 = {"Memos": [{"Memo": {"MemoData": "data1"}}]}
         t_4 = {"Memos": [{"Memo": {"MemoData": "data2", "MemoType": "stringtype", "multiple": {"issuer": 5}}}]}
 
+        self.assertIsNotNone(caspian_bronze_key)
         c = CaspianCollector(key=caspian_bronze_key)
         response = await c.acollect_output(t_1)
         self.assertNotEqual(response.status_code, 400)
