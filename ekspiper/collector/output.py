@@ -40,21 +40,23 @@ class CaspianCollector(OutputCollector):
         self.schema_type = schema_type
         self.schema_version = schema_version
 
+        logger.info(f'[CaspianCollector] initializing caspian collector with bronze table: {self.bronze_table}, '
+                    f'silver table: {self.silver_table}, url: {self.url}, schema type: {self.schema_type}')
+
     async def acollect_output(self,
                               entry: Dict[str, Any],
                               ):
         headers = {'x-api-key': self.key}
         data = {"producerName": self.bronze_table, "entityName": self.silver_table, "schemaType": self.schema_type,
                 "schemaVersion": self.schema_version, "timestamp": time.time(), "data": [entry]}
-        # Convert the data to JSON format
         json_data = json.dumps(data)
-
-        # Make the API request
+        logger.info(f'[CaspianCollector] Pushing data to bronze table {self.bronze_table} '
+                    f'and silver table: {self.silver_table}')
         response = requests.post(self.url, headers=headers, data=json_data)
 
-        # Print the response status code and content
-        print(f'[CaspianCollector] response status code {response.status_code}')
-        print(f'[CaspianCollector] response content: {response.content}')
+        if response.status_code != 200:
+            logger.info(f'[CaspianCollector] Response status code: {response.status_code}')
+            logger.error(f'[CaspianCollector] was not able to push data to caspian: {response.content}')
 
         return response
 
@@ -107,10 +109,10 @@ class LoggerCollector(OutputCollector):
 class STDOUTCollector(OutputCollector):
     def __init__(self,
                  tag_name: str = "",
-                 is_simplified: bool = False,
+                 is_simplified: bool = True,
                  ):
         self.tag_name = tag_name
-        self.is_simplified = False
+        self.is_simplified = is_simplified
 
     async def acollect_output(self,
                               entry: Dict[str, Any]

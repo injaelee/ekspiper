@@ -113,7 +113,8 @@ async def start_template_flows(
     app["ledger_record_source_sink"] = ledger_record_source_sink
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
-    caspian_bronze_key = os.environ['caspian_bronze_key']
+    caspian_bronze_key = os.environ['caspian_bronze_key']g
+    caspian_url = 'https://l021ln39kb.execute-api.eu-west-1.amazonaws.com/caspian/data/publish'
     state = load_from_s3(path=app.ledger_index_file_path)
     starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
 
@@ -181,7 +182,7 @@ async def start_template_flows(
     ).add_fluent_output_collector(
         fluent_sender=FluentSender(fluent_tag + ".transactions", host=fluent_host, port=fluent_port),
     ).add_caspian_collector(
-        collector=CaspianCollector(key=caspian_bronze_key)
+        collector=CaspianCollector(key=caspian_bronze_key, url=caspian_url, silver_table=fluent_tag + ".transactions")
     ).build()
     flow_txn_record = TemplateFlowBuilder().add_process_collectors_map(pc_map).build()
     app["flow_txn_record"] = asyncio.create_task(flow_txn_record.aexecute(
@@ -199,7 +200,7 @@ async def start_template_flows(
     ).add_fluent_output_collector(
         fluent_sender=FluentSender(fluent_tag + ".ledgers", host=fluent_host, port=fluent_port),
     ).add_caspian_collector(
-        collector=CaspianCollector(key=caspian_bronze_key)
+        collector=CaspianCollector(key=caspian_bronze_key, url=caspian_url, silver_table=fluent_tag + ".ledgers")
     ).build()
     flow_ledger_record = TemplateFlowBuilder().add_process_collectors_map(pc_map_ledgers).build()
     logger.info("[ServerContainer] Done building, running...")
