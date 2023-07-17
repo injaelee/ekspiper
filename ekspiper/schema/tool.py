@@ -8,7 +8,7 @@ from typing import Dict, List, Set
 
 from google.cloud import bigquery
 
-from xrp import XRPLObjectSchema, XRPLTransactionSchema, XRPLLedgerSchema
+from ekspiper.schema.xrp import schema_map
 
 IntermediateNode = namedtuple("IntermediateNode", ["prefix", "name", "obj"])
 
@@ -41,7 +41,6 @@ class BigQuerySchemaBottomUpBuilder:
         built_fields: List[bigquery.SchemaField] = []
         named_google_schema_fields: Dict[str, List[bigquery.SchemaField]] = {}
 
-        prev_node = None
         while len(obj_stack) > 0:
             current_node = obj_stack.pop()
 
@@ -81,8 +80,6 @@ class BigQuerySchemaBottomUpBuilder:
 
                 built_fields.append(current_node.obj)
 
-            prev_node = current_node
-
         return built_fields
 
     def build(self,
@@ -91,14 +88,11 @@ class BigQuerySchemaBottomUpBuilder:
 
         obj_stack: List[IntermediateNode] = []
 
-        # build the object stack
         for full_key in sorted(schema_dict.keys()):
             tokens = full_key.split(".")
 
-            # prefix key is the canonical name without the key
             prefix_key = ".".join(tokens[:-1])
 
-            # the key name is the last token
             key = tokens[-1]
             logger.debug(f"{prefix_key} - {key}")
 
@@ -323,13 +317,7 @@ if __name__ == "__main__":
 
     cli_args = arg_parser.parse_args()
 
-    schema_dict = {
-        "ledger": XRPLLedgerSchema.SCHEMA,
-        "transaction": XRPLTransactionSchema.SCHEMA,
-        "object": XRPLObjectSchema.SCHEMA,
-    }
-
-    schema = schema_dict.get(cli_args.schema)
+    schema = schema_map.get(cli_args.schema)
     if not schema:
         sys.exit("[ERROR] Specify a valid schema. Given '%s'." % cli_args.schema)
 

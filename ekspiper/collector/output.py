@@ -1,11 +1,17 @@
 import asyncio
 import logging
-from typing import Any, Dict
+import time
 
+import pyarrow.parquet as pq
+import pandas as pd
+import pyarrow as pa
+import requests
+
+from typing import Any, Dict
 from fluent.asyncsender import FluentSender
 from google.cloud import bigquery
-
 from ekspiper.connect.data import DataSink
+from ekspiper.util.state_helper import *
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +22,43 @@ class OutputCollector:
                               entry: Any,
                               ):
         return
+
+
+class CaspianCollector(OutputCollector):
+    def __init__(self,
+                 key: str = None,
+                 url: str = 'https://9num4exin3.execute-api.us-east-1.amazonaws.com/caspian/data/publish',
+                 bronze_table: str = 'ripplex',
+                 silver_table: str = 'mainnet-testing',
+                 schema_type: str = 'mainnet',
+                 schema_version: int = 1
+                 ):
+        self.key = key
+        self.url = url
+        self.bronze_table = bronze_table
+        self.silver_table = silver_table
+        self.schema_type = schema_type
+        self.schema_version = schema_version
+
+        logger.info(f'[CaspianCollector] initializing caspian collector with bronze table: {self.bronze_table}, '
+                    f'silver table: {self.silver_table}, url: {self.url}, schema type: {self.schema_type}')
+
+    async def acollect_output(self,
+                              entry: Dict[str, Any],
+                              ):
+        headers = {'x-api-key': self.key}
+        data = {"producerName": self.bronze_table, "entityName": self.silver_table, "schemaType": self.schema_type,
+                "schemaVersion": self.schema_version, "timestamp": time.time(), "data": [entry]}
+        json_data = json.dumps(data)
+        logger.info(f'[CaspianCollector] Pushing data to bronze table {self.bronze_table} '
+                    f'and silver table: {self.silver_table}')
+        response = requests.post(self.url, headers=headers, data=json_data)
+
+        if response.status_code != 200:
+            logger.info(f'[CaspianCollector] Response status code: {response.status_code}')
+            logger.error(f'[CaspianCollector] was not able to push data to caspian: {response.content}')
+
+        return response
 
 
 class BigQueryCollector(OutputCollector):
@@ -66,7 +109,7 @@ class LoggerCollector(OutputCollector):
 class STDOUTCollector(OutputCollector):
     def __init__(self,
                  tag_name: str = "",
-                 is_simplified: bool = False,
+                 is_simplified: bool = True,
                  ):
         self.tag_name = tag_name
         self.is_simplified = is_simplified
@@ -74,13 +117,7 @@ class STDOUTCollector(OutputCollector):
     async def acollect_output(self,
                               entry: Dict[str, Any]
                               ):
-        if self.is_simplified:
-            if type(entry) == dict:
-                print("[STDOUTCollector::%s] Received entry keys: %s" % (
-                    self.tag_name,
-                    entry.keys(),
-                ))
-        else:
+        if not self.is_simplified:
             print("[STDOUTCollector::%s] %s" % (
                 self.tag_name,
                 entry,

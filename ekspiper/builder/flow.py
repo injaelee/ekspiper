@@ -10,7 +10,7 @@ from ekspiper.collector.output import (
     OutputCollector,
     STDOUTCollector,
     QueueCollector,
-    DataSinkCollector, BigQueryCollector,
+    DataSinkCollector, BigQueryCollector, CaspianCollector,
 )
 from ekspiper.processor.base import EntryProcessor
 from ekspiper.template.processor import (
@@ -60,6 +60,11 @@ class ProcessCollectorsMapBuilder:
             fluent_sender=fluent_sender,
             tag_name=tag_name,
         ))
+        return self
+
+    def add_caspian_collector(self, collector: CaspianCollector):
+        self.output_collectors.append(collector)
+
         return self
 
     def add_bigquery_output_collector(self, project: str, dataset: str, table: str) -> ProcessCollectorsMapBuilder:

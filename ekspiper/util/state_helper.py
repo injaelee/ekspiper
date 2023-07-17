@@ -38,8 +38,8 @@ def save_to_s3(data, bucket: str = 'caspian-ripplex-dev', path: str = '/app_data
     try:
         if data is not None:
             s3 = boto3.client('s3')
-            s3.put_object(Body=data, Key=path, Bucket=bucket)
             logger.info("[StateHelper] Saving data to path %s", path)
+            s3.put_object(Body=data, Key=path, Bucket=bucket)
     except Exception as e:
         logger.error("[StateHelper] Failed to save to s3: %s", str(e))
         return False
