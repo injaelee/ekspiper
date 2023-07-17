@@ -28,7 +28,7 @@ jobs:
       - name: Build Docker image
         run: |
           echo "Building Docker image ${{ inputs.docker_image_location }}"
-          docker build --build-arg "CASPIAN_BRONZE_KEY={{secrets.CASPIAN_BRONZE_KEY}}" -t "${{ inputs.docker_image_location }}"  .
+          docker build --build-arg "CASPIAN_BRONZE_KEY=${{secrets.CASPIAN_BRONZE_KEY}}" -t "${{ inputs.docker_image_location }}"  .
       - name: Publish to GCR
         run: |
           echo "Pushing Docker image ${{ inputs.docker_image_location }}"
