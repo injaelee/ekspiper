@@ -12,8 +12,5 @@ COPY ekspiper ./ekspiper
 COPY server_container.py .
 COPY config.yml .
 
-RUN echo "Printing caspian bronze key"
-RUN echo $caspian_bronze_key
-
 ENTRYPOINT ["python", "server_container.py"]
 CMD ["-c", "/app/config.yml"]
