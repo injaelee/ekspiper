@@ -114,6 +114,8 @@ async def start_template_flows(
     app["txn_record_source_sink"] = txn_record_source_sink
     app["flow_ledger_details"] = []
     caspian_bronze_key = os.environ['caspian_bronze_key']
+    if caspian_bronze_key is None:
+        logger.error("[ServerContainer] No Caspian Bronze Key Provided")
     caspian_url = 'https://l021ln39kb.execute-api.eu-west-1.amazonaws.com/caspian/data/publish'
     state = load_from_s3(path=app.ledger_index_file_path)
     starting_index = state["ledger_index"] if state is not None and "ledger_index" in state else None
