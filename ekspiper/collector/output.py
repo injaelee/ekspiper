@@ -48,14 +48,17 @@ class CaspianCollector(OutputCollector):
                               ):
         headers = {'x-api-key': self.key}
         data = {"producerName": self.bronze_table, "entityName": self.silver_table, "schemaType": self.schema_type,
-                "schemaVersion": self.schema_version, "timestamp": time.time(), "data": [entry]}
+                "schemaVersion": self.schema_version, "timestamp": int(time.time()), "data": [entry]}
         json_data = json.dumps(data)
         logger.info(f'[CaspianCollector] Pushing data to bronze table {self.bronze_table} '
                     f'and silver table: {self.silver_table}')
         response = requests.post(self.url, headers=headers, data=json_data)
 
+        logger.info(f'[CaspianCollector] {response.status_code}')
+        logger.info(f'[CaspianCollector] {response.content}')
+
         if response.status_code != 200:
-            logger.info(f'[CaspianCollector] Response status code: {response.status_code}')
+            logger.error(f'[CaspianCollector] Response status code: {response.status_code}')
             logger.error(f'[CaspianCollector] was not able to push data to caspian: {response.content}')
 
         return response

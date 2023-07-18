@@ -25,7 +25,7 @@ def save_ledger_to_s3(ledger: int, bucket: str = 'caspian-ripplex-dev', path: st
 
     if ledger is not None:
         save_data["ledger_index"] = ledger
-        logger.info("[StateHelper] Saving state to S3: %s", str(save_data))
+        logger.info("[StateHelper] Saving state to S3: %s...", str(save_data))
         save_data_bytes = json.dumps(save_data).encode('utf-8')
         return save_to_s3(save_data_bytes, bucket=bucket, path=path)
     else:
@@ -38,8 +38,8 @@ def save_to_s3(data, bucket: str = 'caspian-ripplex-dev', path: str = '/app_data
     try:
         if data is not None:
             s3 = boto3.client('s3')
-            logger.info("[StateHelper] Saving data to path %s", path)
             s3.put_object(Body=data, Key=path, Bucket=bucket)
+            logger.info("[StateHelper] Saved data to path %s", path)
     except Exception as e:
         logger.error("[StateHelper] Failed to save to s3: %s", str(e))
         return False
